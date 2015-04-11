@@ -1,0 +1,19 @@
+* TODO Websocket Transport
+
+I've been having trouble with gun -- it errors silently. With gun's new [[https://github.com/ninenines/gun/commit/8366ba94bb9e450221a246acdd482c0162affcd9][tracing]]
+hopefully this will be easier. I'd like to stick with gun because it fits the
+persistently connected model, and it's shaping up to be a great library.
+
+- [X] spec out the transportable protocol
+- [ ] test transport connection to websocket server
+  
+* TODO Documentation
+
+- [ ] upload and link to hexdocs
+- [ ] add example usage to spell.ex
+
+* TODO Testing
+
+- [X] start crossbar server for tests
+- Maybe?
+  - [ ] build scripts to setup crossbar
