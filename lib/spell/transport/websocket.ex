@@ -5,10 +5,13 @@ defmodule Spell.Transport.WebSocket do
   By default the websocket will use port `443`. Use `new/2` to set the
   port when creating a new websocket transport.
   """
+  require Logger
 
   # Module Attributes
 
   defstruct [:monitor, :pid, :host, port: 443]
+
+  @options_spec [:host, {:port, default: 80}, {:path, default: ""}]
 
   # Type Declarations
 
@@ -18,10 +21,10 @@ defmodule Spell.Transport.WebSocket do
     host:    :inet.hostname,
     port:    :inet.port}
 
-  @type opts :: [
+  @type options :: [
       {:host, String.t}
     | {:port, :inet.port}
-    | {:gun_opts, :gun.opts}]
+    | {:path, String.t}]
 
 
   # Public Functions
@@ -33,20 +36,25 @@ defmodule Spell.Transport.WebSocket do
 
    * `:host` required, the target host.
    * `:port` required, the target port.
-   * `:gun_opts` optional, options to be passed to `gun:open/3`
+   * `:path` defaults to "", HTTP resource path. It must be
+     prefixed with a `/`.
   """
-  @spec new(opts) :: {:ok, t} | {:error, term}
-  def new(opts) when is_list(opts) do
-    case get_all(opts, [:host, :port, {:gun_opts, default: []}]) do
-      {:ok, [host_bin, port, gun_opts]}
-          when is_binary(host_bin) and is_integer(port) ->
-        # `:inet.hostname` is a charlist. O Erlang compat
-        host = String.to_char_list(host_bin)
-        case :gun.open(host, port, gun_opts) do
+  @spec new(options) :: {:ok, t} | {:error, term}
+  def new(options) when is_list(options) do
+    case get_all(options, @options_spec) do
+      {:ok, [host, port, path]}
+          when is_binary(host) and is_integer(port) and is_binary(path) ->
+        url = "ws://#{host}:#{port}#{path}"
+        headers = [{"Sec-WebSocket-Protocol", "wamp.2.json"}]
+        Logger.debug(fn -> "Connecting to #{url}..." end)
+        case :websocket_client.start_link(url, __MODULE__, [],
+                                          extra_headers: headers) do
           {:ok, pid} ->
+            Logger.debug(fn -> "Successfully connected to #{url}." end)
             {:ok, %__MODULE__{pid: pid, host: host, port: port,
                               monitor: Process.monitor(pid)}}
           {:error, reason} ->
+            Logger.debug(fn -> "Error [#{url}]: #{inspect(reason)}" end)
             {:error, reason}
         end
       {:error, reason} ->
@@ -54,6 +62,26 @@ defmodule Spell.Transport.WebSocket do
     end
   end
 
+  # `websocket_client` Callbacks
+
+  def init([], _conn_state) do
+    {:ok, nil}
+  end
+
+  def websocket_handle(msg, _conn_state, state) do
+    IO.inspect msg
+    {:ok, state}
+  end
+
+  def websocket_info(info, _conn_state, state) do
+    IO.inspect info
+    {:ok, state}
+  end
+
+  def websocket_terminate(reason, _conn_state, _state) do
+    Logger.debug(fn -> "Connection terminating due to #{inspect(reason)}" end)
+    :ok
+  end
 
   # Private Functions
 

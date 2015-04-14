@@ -9,15 +9,14 @@ defmodule Spell.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :gun, :poison]]
+    [applications: [:logger, :websocket_client, :poison]]
   end
 
   # TODO: allow transport/serialization deps to be filtered out
   defp deps do
     [
-     # TODO: Get gun off the bleeding edge -- hex.pm?
      # Req'd by: `Spell.Transport.Websocket`
-     {:gun, github: "ninenines/gun", branch: "master"},
+     {:websocket_client, github: "jeremyong/websocket_client", tag: "v0.7"},
 
      # Req'd by: `Spell.Serializer.JSON`
      {:poison, "~> 1.3.1"}

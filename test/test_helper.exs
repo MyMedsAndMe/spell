@@ -43,7 +43,7 @@ defmodule TestHelper do
     @doc """
     Return the port which the crossbar transport is listening on.
     """
-    @spec get_port(atom) :: :inet.port
+    @spec get_port(:websocket) :: :inet.port
     def get_port(:websocket), do: 8080
 
     @doc """
@@ -53,10 +53,18 @@ defmodule TestHelper do
     def get_host, do: "localhost"
 
     @doc """
+    Get the crossbar resource path.
+    """
+    @spec get_path(:websocket) :: String.t
+    def get_path(:websocket), do: "/ws"
+
+    @doc """
     ExUnit setup helper function.
     """
     def config(listener \\ :websocket)
-    def config(listener), do: [host: get_host, port: get_port(listener)]
+    def config(listener) do
+      [host: get_host, port: get_port(listener), path: get_path(listener)]
+    end
 
     @doc """
     Stop the crossbar server.
@@ -74,12 +82,12 @@ defmodule TestHelper do
       end
     end
 
-
     # GenEvent Callbacks
 
     @doc """
     Initialize the GenEvent handler with opts.
     """
+    @spec init(Keyword.t) :: {:ok, t} | {:error, term}
     def init(opts) do
       executable = Dict.get(opts, :executable, @crossbar_exec)
       arguments  = Dict.get(opts, :executable, @crossbar_args)
@@ -87,10 +95,14 @@ defmodule TestHelper do
       port = Port.open({:spawn_executable, executable}, port_opts(arguments))
       # Wait for crossbar to start.
       # TODO: poll a listener or some such.
-      :timer.sleep(400)
-      {:ok, %__MODULE__{port: port,
-                        executable: executable,
-                        arguments: arguments}}
+      case await do
+        :ok ->
+          {:ok, %__MODULE__{port: port,
+                            executable: executable,
+                            arguments: arguments}}
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
 
     @doc """
@@ -118,10 +130,21 @@ defmodule TestHelper do
       Logger.debug("Terminating due to: finished")
     end
 
-
     # Private Functions
 
-    @doc false
+    @spec await(Keyword.t) :: :ok | {:error, :timeout | term}
+    defp await(config \\ config(:websocket), interval \\ 250, retries \\ 40)
+    defp await(config, _interval, 0), do: {:error, :timeout}
+    defp await(config, interval, retries) do
+      case Spell.Transport.WebSocket.new(config) do
+        {:error, :econnrefused} ->
+          :timer.sleep(interval)
+          await(config, interval, retries - 1)
+        {:ok, _pid}      -> :ok
+        {:error, reason} -> {:error, reason}
+      end
+    end
+
     @spec port_opts([String.t]) :: Keyword.t
     defp port_opts(arguments) do
       [{:args, ["start" | arguments]},
@@ -134,4 +157,4 @@ defmodule TestHelper do
   end
 end
 
-ExUnit.start(formatters: [TestHelper.Crossbar])
+ExUnit.start(formatters: [ExUnit.CLIFormatter, TestHelper.Crossbar])
