@@ -19,7 +19,7 @@ defmodule Spell.Mixfile do
      {:websocket_client, github: "jeremyong/websocket_client", tag: "v0.7"},
 
      # Req'd by: `Spell.Serializer.JSON`
-     {:poison, "~> 1.3.1"}
+     {:poison, "~> 1.4.0"}
     ]
   end
 end

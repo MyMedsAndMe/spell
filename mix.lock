@@ -1,2 +1,2 @@
-%{"poison": {:hex, :poison, "1.3.1"},
+%{"poison": {:hex, :poison, "1.4.0"},
   "websocket_client": {:git, "git://github.com/jeremyong/websocket_client.git", "f465f229958293949e4a192bea65a7e47bb2f762", [tag: "v0.7"]}}

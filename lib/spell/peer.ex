@@ -9,4 +9,25 @@ defmodule Spell.Peer do
 
   """
   use GenServer
+
+  defstruct [:transport, :serializer]
+
+  # Type Specs
+
+  @type transport  :: map
+  @type serializer :: atom
+  @type t :: %__MODULE__{
+    transport: map,
+    serializer: atom}
+
+  # Public Functions
+
+  @doc """
+  Create a new peer using `transport` and `serializer`.
+  """
+  @spec new(transport, serializer) :: {:ok, t} | {:error, term}
+  def new(transport, serializer) do
+    {:ok, %__MODULE__{transport: transport, serializer: serializer}}
+  end
+
 end
