@@ -1,4 +1,4 @@
-defmodule Spell.PeerTest do
+defmodule Spell.HelloTest do
   use ExUnit.Case
 
   alias TestHelper.Crossbar
