@@ -15,8 +15,10 @@ defmodule TestHelper do
 
     """
 
-    require Logger
     use GenEvent
+    require Logger
+
+    alias Spell.Serializer
 
     # Module Attributes
 
@@ -136,7 +138,7 @@ defmodule TestHelper do
     defp await(config \\ config(:websocket), interval \\ 250, retries \\ 40)
     defp await(config, _interval, 0), do: {:error, :timeout}
     defp await(config, interval, retries) do
-      case Spell.Transport.WebSocket.new(config) do
+      case Spell.Transport.WebSocket.connect(Serializer.JSON, config) do
         {:error, :econnrefused} ->
           :timer.sleep(interval)
           await(config, interval, retries - 1)
