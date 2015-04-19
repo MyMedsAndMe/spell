@@ -4,7 +4,7 @@ defmodule Spell.ConnectTest do
   alias Spell.Transport.WebSocket
   alias TestHelper.Crossbar
 
-  @serializer Spell.Serializer.JSON
+  @serializer "json"
 
   setup do: {:ok, Crossbar.config}
 

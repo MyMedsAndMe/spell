@@ -8,21 +8,21 @@ defmodule Spell.HelloTest do
   alias Spell.Serializer
 
   setup do
-    {:ok, peer} = Peer.new(transport: {Transport.WebSocket, Crossbar.config},
-                           serializer: Serializer.JSON)
+    {:ok, peer} = Peer.start_link(transport: {Transport.WebSocket,
+                                              Crossbar.config},
+                                  serializer: Serializer.JSON)
     {:ok, [peer: peer]}
   end
 
   test "new/1", %{peer: peer} do
-    assert peer.transport == Transport.WebSocket
-    assert peer.serializer == Serializer.JSON
+    # Not a great test...
+    assert is_pid(peer)
   end
 
   test "send/2", %{peer: peer} do
-    args = ["my.realm",
-            %{roles: %{publisher: %{}, subscriber: %{}}}]
-    assert :ok == Peer.send(peer, Message.new!(type: :hello, args: args))
-    assert_receive {Spell, _pid, %Message{}}
+    args = ["my.realm", %{roles: %{publisher: %{}, subscriber: %{}}}]
+    assert :ok == Peer.send_message(peer, Message.new!(type: :hello, args: args))
+    assert_receive {Peer, _pid, %Message{}}
   end
 
 end

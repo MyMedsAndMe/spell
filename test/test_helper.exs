@@ -18,8 +18,6 @@ defmodule TestHelper do
     use GenEvent
     require Logger
 
-    alias Spell.Serializer
-
     # Module Attributes
 
     @timeout       1000
@@ -96,7 +94,6 @@ defmodule TestHelper do
       Logger.debug("Starting crossbar: #{inspect([executable | arguments])}")
       port = Port.open({:spawn_executable, executable}, port_opts(arguments))
       # Wait for crossbar to start.
-      # TODO: poll a listener or some such.
       case await do
         :ok ->
           {:ok, %__MODULE__{port: port,
@@ -128,7 +125,7 @@ defmodule TestHelper do
       {:ok, state}
     end
 
-    def terminate({:error, :finished}, state) do
+    def terminate({:error, :finished}, _state) do
       Logger.debug("Terminating due to: finished")
     end
 
@@ -136,9 +133,9 @@ defmodule TestHelper do
 
     @spec await(Keyword.t) :: :ok | {:error, :timeout | term}
     defp await(config \\ config(:websocket), interval \\ 250, retries \\ 40)
-    defp await(config, _interval, 0), do: {:error, :timeout}
+    defp await(_config, _interval, 0), do: {:error, :timeout}
     defp await(config, interval, retries) do
-      case Spell.Transport.WebSocket.connect(Serializer.JSON, config) do
+      case Spell.Transport.WebSocket.connect("json", config) do
         {:error, :econnrefused} ->
           :timer.sleep(interval)
           await(config, interval, retries - 1)

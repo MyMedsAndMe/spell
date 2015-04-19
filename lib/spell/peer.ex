@@ -16,49 +16,93 @@ defmodule Spell.Peer do
 
   defstruct [:transport,
              :serializer,
-             :transport_state]
+             :transport_state,
+             :owner]
 
   # Type Specs
 
-  @type new_option ::
+  @type start_option ::
      {:serializer, module}
-   | {:transport, module}
+   | {:transport, {module, Keyword.t}}
 
   @type t :: %__MODULE__{
-    transport:       module,
-    serializer:      module,
-    transport_state: any}
+    transport:  map,
+    serializer: module,
+    owner:      pid}
 
   # Public Functions
 
   @doc """
-  Create a new peer.
+  Start a new peer.
+
+  ## Options
+
+   * `:transport :: {module, Keyword.t}`
+   * `:serializer :: module`
   """
-  @spec new([new_option]) :: {:ok, t} | {:error, any}
-  def new(options) do
-    {transport, options} = Dict.get(options, :transport)
-    serializer = Dict.get(options, :serializer, @default_serializer)
-    case transport.connect(serializer, options) do
-      {:ok, transport_state} ->
-        {:ok, %__MODULE__{transport: transport,
-                          serializer: serializer,
-                          transport_state: transport_state}}
-      {:error, reason} ->
-        {:error, {:transport, reason}}
-    end
+  @spec start_link([start_option]) :: {:ok, t} | {:error, any}
+  def start_link(options) when is_list(options) do
+    GenServer.start_link(__MODULE__, {self(), options})
   end
 
   @doc """
   Send a message via the peer.
   """
-  @spec send(t, Message.t) :: :ok | {:error, any}
-  def send(%__MODULE__{} = peer, %Message{} = message) do
-    case peer.serializer.encode(message) do
-      {:ok, encoded_message} ->
-        peer.transport.send_message(peer.transport_state, encoded_message)
+  @spec send_message(pid, Message.t) :: :ok | {:error, any}
+  def send_message(peer, %Message{} = message) do
+    GenServer.call(peer, {:send, message})
+  end
+
+  # GenServer Callbacks
+
+  def init({owner, options}) do
+    {transport_module, options} = Dict.get(options, :transport)
+    serializer = Dict.get(options, :serializer, @default_serializer)
+    case transport_module.connect(serializer.name(), options) do
+      {:ok, transport_pid} ->
+        {:ok, %__MODULE__{transport: %{module: transport_module,
+                                       options: options,
+                                       pid: transport_pid},
+                          serializer: %{module: serializer},
+                          owner: owner}}
       {:error, reason} ->
-        {:error, {:serializer, reason}}
+        {:error, {:transport, reason}}
     end
+  end
+
+  def handle_call({:send, message}, _from, state) do
+    case state.serializer.module.encode(message) do
+      {:ok, raw_message} ->
+        resp = state.transport.module.send_message(state.transport.pid,
+                                                   raw_message)
+        {:reply, resp, state}
+      {:error, reason} ->
+        {:reply, {:error, {:serializer, reason}}, state}
+    end
+  end
+
+  def handle_info({module, pid, {:message, raw_message}},
+                  %{transport: %{module: module, pid: pid}} = state) do
+    case state.serializer.module.decode(raw_message) do
+      {:ok, message} ->
+        :ok = send_from(state.owner, message)
+        {:noreply, state}
+      {:error, reason} ->
+        {:stop, {:serializer, reason}, state}
+    end
+  end
+  def handle_info({module, pid, {:teminating, reason}},
+                  %{transport: %{module: module, pid: pid}} = state) do
+    {:stop, reason, state}
+  end
+
+  # Private Functions
+
+  # This would make a decent macro
+  @spec send_from(pid, any) :: :ok
+  def send_from(pid, message) do
+    send(pid, {__MODULE__, self(), message})
+    :ok
   end
 
 end

@@ -3,7 +3,7 @@ defmodule Spell.Transport.WebSocketTest do
 
   alias Spell.Transport.WebSocket
 
-  @serializer Spell.Serializer.JSON
+  @serializer "json"
 
   test "new/1 -- bad host" do
     assert {:error, :nxdomain} =
