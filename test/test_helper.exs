@@ -61,9 +61,15 @@ defmodule TestHelper do
     @doc """
     ExUnit setup helper function.
     """
-    def config(listener \\ :websocket)
-    def config(listener) do
+    def config(listener \\ :websocket) do
       [host: get_host, port: get_port(listener), path: get_path(listener)]
+    end
+
+    @doc """
+    Get the config as a uri.
+    """
+    def get_uri(config) do
+      "ws://#{config[:host]}:#{config[:port]}#{config[:path]}"
     end
 
     @doc """

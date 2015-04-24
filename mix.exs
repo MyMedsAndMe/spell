@@ -12,7 +12,8 @@ defmodule Spell.Mixfile do
     [applications: [:logger,
                     # :sasl,
                     :websocket_client,
-                    :poison]]
+                    :poison],
+    mod: {Spell, []}]
   end
 
   # TODO: allow transport/serialization deps to be filtered out

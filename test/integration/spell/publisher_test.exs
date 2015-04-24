@@ -10,7 +10,7 @@ defmodule Spell.PublisherTest do
   @realm "realm1"
 
   setup do
-    {:ok, peer} = Peer.start_link(transport: Crossbar.config,
+    {:ok, peer} = Peer.new(transport: Crossbar.config,
                                   features: %{publisher: %{}},
                                   roles: [{Session, [realm: @realm]},
                                           Publisher])

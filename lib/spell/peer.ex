@@ -15,6 +15,10 @@ defmodule Spell.Peer do
 
   require Logger
 
+  # Module Attributes
+
+  @supervisor_name __MODULE__.Supervisor
+
   @default_serializer_module Spell.Serializer.JSON
   @default_transport_module  Spell.Transport.WebSocket
 
@@ -33,12 +37,23 @@ defmodule Spell.Peer do
     transport:  map,
     serializer: module,
     owner:      pid,
-    role:      map}
+    role:       map}
 
   # Public Functions
 
   @doc """
-  Start a new peer.
+  Start `Spell.Peer.Supervisor`.
+  """
+  def start_link() do
+    import Supervisor.Spec
+    child = worker(__MODULE__, [], [function: :new, restart: :transient])
+    options = [strategy: :simple_one_for_one, name: @supervisor_name]
+    Supervisor.start_link([child], options)
+  end
+
+  @doc """
+  Start a new peer. Can be used to start a child outside of the supervision
+  tree.
 
   ## Options
 
@@ -46,9 +61,21 @@ defmodule Spell.Peer do
    * `:serializer :: module`
    * `:roles :: [{module, Keyword.t}]`
   """
-  @spec start_link([start_option]) :: {:ok, t} | {:error, any}
-  def start_link(options) when is_list(options) do
+  @spec new([start_option]) :: {:ok, t} | {:error, any}
+  def new(options) when is_list(options) do
     GenServer.start_link(__MODULE__, {self(), options})
+  end
+
+  @doc """
+  Add a new child as part of the supervision tree.
+
+  ## Options
+
+  See `new/1`.
+  """
+  def add(options) do
+    Supervisor.start_child(@supervisor_name,
+                           [[{:owner, self()} | options]])
   end
 
   @doc """
@@ -84,13 +111,14 @@ defmodule Spell.Peer do
     case normalize_options(options) do
       {:ok, %{transport: {transport_module, transport_options},
               serializer: {serializer_module, _serializer_options},
+              owner: options_owner,
               role: %{options: role_options, features: role_features}}} ->
         send(self(), {:role_hook, :init})
         {:ok, %__MODULE__{transport: %{module: transport_module,
                                        options: transport_options,
                                        pid: nil},
                           serializer: %{module: serializer_module},
-                          owner: owner,
+                          owner: options_owner || owner,
                           role: %{options: role_options,
                                   state: nil,
                                   features: role_features}}}
@@ -196,6 +224,7 @@ defmodule Spell.Peer do
         %{transport: Dict.get(options, :transport),
           serializer: Dict.get(options, :serializer,
                                @default_serializer_module),
+          owner: Dict.get(options, :owner),
           role: %{options: role_options,
                   features: Dict.get(options, :features,
                                      Role.collect_features(role_options))}}

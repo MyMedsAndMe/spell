@@ -10,10 +10,10 @@ defmodule Spell.SubscribeTest do
   @realm "realm1"
 
   setup do
-    {:ok, peer} = Peer.start_link(transport: Crossbar.config,
-                                  features: %{publisher: %{}},
-                                  roles: [{Session, [realm: @realm]},
-                                          Subscriber])
+    {:ok, peer} = Peer.new(transport: Crossbar.config,
+                           features: %{publisher: %{}},
+                           roles: [{Session, [realm: @realm]},
+                                   Subscriber])
     receive do
       {Spell.Peer, ^peer, %{type: :welcome}} ->
         {:ok, [peer: peer]}
@@ -24,6 +24,7 @@ defmodule Spell.SubscribeTest do
 
   test "subscribe/2", %{peer: peer} do
     {:ok, subscriber_id} = Subscriber.subscribe(peer, @topic)
+    assert is_integer(subscriber_id)
   end
 
 end

@@ -10,9 +10,9 @@ defmodule Spell.HelloTest do
   @realm "realm1"
 
   setup do
-    {:ok, peer} = Peer.start_link(transport: {Transport.WebSocket,
-                                              Crossbar.config},
-                                  serializer: Serializer.JSON)
+    {:ok, peer} = Peer.new(transport: {Transport.WebSocket,
+                                       Crossbar.config},
+                           serializer: Serializer.JSON)
     {:ok, [peer: peer]}
   end
 

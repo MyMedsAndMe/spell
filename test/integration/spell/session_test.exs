@@ -10,9 +10,9 @@ defmodule Spell.SessionTest do
   setup do: {:ok, [config: Crossbar.config]}
 
   test "peer with session", %{config: config} do
-    {:ok, peer} = Peer.start_link(transport: config,
-                                  features: %{publisher: %{}},
-                                  roles: [{Session, [realm: @realm]}])
+    {:ok, peer} = Peer.new(transport: config,
+                           features: %{publisher: %{}},
+                           roles: [{Session, [realm: @realm]}])
     assert_receive {Peer, ^peer, %{type: :welcome}}
   end
 end
