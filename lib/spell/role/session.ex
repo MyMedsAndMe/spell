@@ -1,4 +1,14 @@
 defmodule Spell.Role.Session do
+  @moduledoc """
+  The `Spell.Role.Session` module implements the behaviour for a session
+  role.
+
+  Unlike other roles, sessions are implicit.
+
+  ## TODO
+
+   * Auth
+  """
   use Spell.Role
 
   alias Spell.Message
@@ -8,24 +18,29 @@ defmodule Spell.Role.Session do
 
   # Module Attributes
 
-  defstruct [:realm, :middleware_stack]
+  defstruct [:realm, :roles]
 
   @goodbye_and_out "wamp.error.goodbye_and_out"
 
-  # Middleware Callbacks
+
+  # Role Callbacks
 
   @doc """
-  Called when initializing the middleware.
+  Returns the state with the specified realm and role.
+
+   * `peer_options :: Map.t`
   """
-  def init(options) do
-    {:ok, get_state(options)}
+  def init(peer_options, session_options) do
+    {:ok, struct(%__MODULE__{},
+                 [{:roles, peer_options.role.features}
+                  | session_options])}
   end
 
   @doc """
-  Called on connection open.
+  Send a HELLO message when the connection is opened.
   """
   def on_open(peer, %{realm: realm} = state) when realm != nil do
-    {:ok, hello} = new_hello(state.realm, %{roles: get_features(state)})
+    {:ok, hello} = new_hello(state.realm, %{roles: state.roles})
     case Peer.send_message(peer, hello) do
       :ok              -> {:ok, state}
       {:error, reason} -> {:error, reason}
@@ -33,15 +48,21 @@ defmodule Spell.Role.Session do
   end
 
   @doc """
-  Called on connection close.
+  TODO: get rid of this?? Default handler works
   """
-  def on_close(%{}, peer, state) do
-    Peer.send_message(peer, new_goodbye())
+  def on_close(peer, state) do
     {:ok, state}
   end
 
   @doc """
-  Called when the peer receives a message.
+  Handle WELCOME, GOODBYE, and ABORT messages.
+
+  ## Behaviour
+
+   * WELCOME: set the peer session
+   * GOODBYE: close the connection normally
+   * ABORT: close the connection with an error. With the default supervision
+     settings, the peer will be restarted.
   """
   def handle(%Message{type: :welcome, args: [session, _details]},
              peer, state) do
@@ -67,19 +88,6 @@ defmodule Spell.Role.Session do
 
   defp new_goodbye(reason \\ @goodbye_and_out, details \\ %{}) do
     Message.new(type: :goodbye, args: [details, reason])
-  end
-
-  defp get_state(options) do
-    struct(%__MODULE__{}, options)
-  end
-
-  defp get_features(state) do
-    # TODO: get this working across modules
-    %{publisher: %{}}
-    # Enum.reduce(state.middleware_stack || [], %{}, fn
-    #   middleware, features ->
-    #     Dict.merge(features, middleware.features())
-    # end)
   end
 
 end

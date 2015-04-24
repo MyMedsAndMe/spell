@@ -9,7 +9,10 @@ defmodule Spell.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :websocket_client, :poison]]
+    [applications: [:logger,
+                    # :sasl,
+                    :websocket_client,
+                    :poison]]
   end
 
   # TODO: allow transport/serialization deps to be filtered out

@@ -61,7 +61,6 @@ defmodule Spell.Transport.WebSocket do
     :ok
   end
 
-
   # :websocket_client Callbacks
 
   def init({owner}, _conn_state) do

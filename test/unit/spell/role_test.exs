@@ -7,17 +7,25 @@ defmodule Spell.RoleTest do
   end
 
   test "default role functions" do
-    assert DefaultRole.init(:options) == {:ok, :options}
-    assert DefaultRole.on_open(nil, :state) == {:ok, :state}
-    assert DefaultRole.on_close(nil, :state) == {:ok, :state}
-    assert DefaultRole.handle(nil, nil, :state) == {:ok, :state}
+    assert nil == DefaultRole.get_features(:options)
+    assert {:ok, :options} == DefaultRole.init(:peer_options, :options)
+    assert {:ok, :state} == DefaultRole.on_open(nil, :state)
+    assert {:ok, :state} == DefaultRole.on_close(nil, :state)
+    assert {:ok, :state} == DefaultRole.handle(nil, nil, :state)
   end
+
+  test "collect_features/1 with nil" do
+    assert %{} == Role.collect_features([{DefaultRole, []}])
+  end
+
 
   defmodule MapRole do
     use Spell.Role
 
-    def init(options) do
-      case Dict.fetch(options, :map) do
+    def get_features(options), do: {:map_role, %{options: options}}
+
+    def init(_peer_options, role_options) do
+      case Dict.fetch(role_options, :map) do
         {:ok, config} -> {:ok, config}
         :error        -> {:error, :no_map}
       end
@@ -35,13 +43,20 @@ defmodule Spell.RoleTest do
     end
   end
 
+  test "collect_features/1" do
+    assert %{map_role: %{options: [map: :opts]}} ==
+      Role.collect_features([{MapRole, [map: :opts]}])
+  end
+
   test "map_init/1" do
     assert {:ok, [{MapRole, :opts}]} ==
-      Role.map_init([{MapRole, [map: :opts]}])
+      Role.map_init([{MapRole, [map: :opts]}], [])
     assert {:ok, [{MapRole, :opts_a}, {MapRole, :opts_b}]} ==
-      Role.map_init([{MapRole, [map: :opts_a]}, {MapRole, [map: :opts_b]}])
+      Role.map_init([{MapRole, [map: :opts_a]},
+                     {MapRole, [map: :opts_b]}],
+                    [])
     assert {:error, {{MapRole, []}, :no_map}} ==
-      Role.map_init([{MapRole, []}])
+      Role.map_init([{MapRole, []}], [])
   end
 
   test "map_on_open/2" do
