@@ -18,7 +18,7 @@ defmodule Spell.Role.Session do
 
   # Module Attributes
 
-  defstruct [:realm, :roles]
+  defstruct [:realm, :roles, session: nil, details: nil]
 
   @goodbye_and_out "wamp.error.goodbye_and_out"
 
@@ -48,13 +48,6 @@ defmodule Spell.Role.Session do
   end
 
   @doc """
-  TODO: get rid of this?? Default handler works
-  """
-  def on_close(peer, state) do
-    {:ok, state}
-  end
-
-  @doc """
   Handle WELCOME, GOODBYE, and ABORT messages.
 
   ## Behaviour
@@ -64,19 +57,16 @@ defmodule Spell.Role.Session do
    * ABORT: close the connection with an error. With the default supervision
      settings, the peer will be restarted.
   """
-  def handle(%Message{type: :welcome, args: [session, _details]},
+  def handle_message(%Message{type: :welcome, args: [session, details]},
              peer, state) do
-    case Peer.set_session(peer, session) do
-      :ok              -> {:ok, state}
-      {:error, reason} -> {:error, reason}
-    end
+    {:ok, %{state | session: session, details: details}}
   end
 
-  def handle(%Message{type: :goodbye} = goodbye, _peer, state) do
+  def handle_message(%Message{type: :goodbye} = goodbye, _peer, state) do
     {:close, goodbye, state}
   end
 
-  def handle(%Message{type: :abort} = abort, _peer, _state) do
+  def handle_message(%Message{type: :abort} = abort, _peer, _state) do
     {:error, abort}
   end
 

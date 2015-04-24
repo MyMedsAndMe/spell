@@ -11,7 +11,7 @@ defmodule Spell.RoleTest do
     assert {:ok, :options} == DefaultRole.init(:peer_options, :options)
     assert {:ok, :state} == DefaultRole.on_open(nil, :state)
     assert {:ok, :state} == DefaultRole.on_close(nil, :state)
-    assert {:ok, :state} == DefaultRole.handle(nil, nil, :state)
+    assert {:ok, :state} == DefaultRole.handle_message(nil, nil, :state)
   end
 
   test "collect_features/1 with nil" do
@@ -37,9 +37,13 @@ defmodule Spell.RoleTest do
     def on_close(_peer, :error), do: {:error, :reason}
     def on_close(_peer, state),  do: {:ok, {:closed, state}}
 
-    def handle(_message, _peer, :error), do: {:error, :reason}
-    def handle(message, _peer, state) do
+    def handle_message(_message, _peer, :error), do: {:error, :reason}
+    def handle_message(message, _peer, state) do
       {:ok, {:messaged, message, state}}
+    end
+
+    def handle_cast(message, _peer, _state) do
+      {:ok, {:casted, message}}
     end
   end
 
@@ -73,9 +77,15 @@ defmodule Spell.RoleTest do
       Role.map_on_close([{MapRole, :error}], :peer)
   end
 
-  test "map_handle/3" do
+  test "map_handle_message/3" do
     assert {:ok, [{Spell.RoleTest.MapRole, {:messaged, :msg, :state}}]} ==
-      Role.map_handle([{MapRole, :state}], :msg, :peer)
+      Role.map_handle_message([{MapRole, :state}], :msg, :peer)
+  end
+
+  test "map_handle_cast/2" do
+    assert {:error, :no_role} == Role.cast([], :role, :peer)
+    assert {:ok, [{Spell.RoleTest.MapRole, :state}]} ==
+      Role.cast([{MapRole, :state}], MapRole, :peer)
   end
 
 end

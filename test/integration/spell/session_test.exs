@@ -4,8 +4,6 @@ defmodule Spell.SessionTest do
   alias TestHelper.Crossbar
   alias Spell.Peer
   alias Spell.Role.Session
-  alias Spell.Transport
-  alias Spell.Serializer
 
   @realm "realm1"
 

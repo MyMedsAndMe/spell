@@ -45,7 +45,6 @@ defmodule Spell.Peer do
    * `:transport :: {module, Keyword.t}`
    * `:serializer :: module`
    * `:roles :: [{module, Keyword.t}]`
-
   """
   @spec start_link([start_option]) :: {:ok, t} | {:error, any}
   def start_link(options) when is_list(options) do
@@ -77,7 +76,7 @@ defmodule Spell.Peer do
               serializer: {serializer_module, _serializer_options},
               role: %{options: role_options, features: role_features}}} ->
         send(self(), {:role_hook, :init})
-        IO.inspect {:ok, %__MODULE__{transport: %{module: transport_module,
+        {:ok, %__MODULE__{transport: %{module: transport_module,
                                        options: transport_options,
                                        pid: nil},
                           serializer: %{module: serializer_module},
@@ -145,8 +144,13 @@ defmodule Spell.Peer do
                   %{transport: %{module: module, pid: pid}} = state) do
     case state.serializer.module.decode(raw_message) do
       {:ok, message} ->
-        :ok = send_from(state.owner, message)
-        {:noreply, state}
+        case Role.map_handle_message(state.role.state, message, self()) do
+          {:ok, role_state} ->
+            :ok = send_from(state.owner, message)
+            {:noreply, put_in(state.role[:state], role_state)}
+          {:error, reason} ->
+            {:stop, {{:role_hook, :handle_message}, reason}, state}
+        end
       {:error, reason} ->
         {:stop, {:serializer, reason}, state}
     end
