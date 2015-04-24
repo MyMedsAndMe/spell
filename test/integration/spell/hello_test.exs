@@ -7,7 +7,7 @@ defmodule Spell.HelloTest do
   alias Spell.Transport
   alias Spell.Serializer
 
-  @realm "arealm"
+  @realm "realm1"
 
   setup do
     {:ok, peer} = Peer.start_link(transport: {Transport.WebSocket,
@@ -24,7 +24,9 @@ defmodule Spell.HelloTest do
   test "send/2", %{peer: peer} do
     args = [@realm, %{roles: %{publisher: %{}, subscriber: %{}}}]
     assert :ok == Peer.send_message(peer, Message.new!(type: :hello, args: args))
-    assert_receive {Peer, _pid, %Message{}}
+    refute_receive {Peer, _pid, %Message{type: :welcome}}
+
+    # TODO: make a pass-through role and check if messages are delivered
   end
 
 end

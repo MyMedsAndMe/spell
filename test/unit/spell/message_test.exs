@@ -22,6 +22,10 @@ defmodule Spell.MessageTest do
     assert %Message{code: 1, type: :hello, args: []} == Message.new!(code: 1)
   end
 
+  test "new_id/0" do
+    assert is_integer(Message.new_id())
+  end
+
   test "get_code_for_type/{1,2}" do
     assert Message.get_code_for_type(nil) == nil
     assert Message.get_code_for_type(:hello) == 1

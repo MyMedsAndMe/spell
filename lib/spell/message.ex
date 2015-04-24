@@ -151,6 +151,14 @@ defmodule Spell.Message do
   end
 
   @doc """
+  Return a new WAMP id.
+  """
+  @spec new_id :: integer
+  def new_id do
+    (:math.pow(2, 53) |> round |> :random.uniform) - 1
+  end
+
+  @doc """
   Get the `code` for the message `type`.
   """
   @spec get_code_for_type(type, default) :: integer | nil | default

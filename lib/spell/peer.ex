@@ -54,17 +54,27 @@ defmodule Spell.Peer do
   @doc """
   Send a message via the peer.
   """
-  @spec send_message(pid, Message.t) :: :ok | {:error, any}
+  @spec send_message(pid, Message.t) :: :ok
   def send_message(peer, %Message{} = message) do
     GenServer.cast(peer, {:send_message, message})
   end
 
   @doc """
   Send a message to the peer's owner.
+
+  TODO: This is inefficient -- roles should send using the peer state.
   """
-  @spec send_to_owner(pid, any) :: :ok | {:error, any}
+  @spec send_to_owner(pid, any) :: :ok
   def send_to_owner(peer, term) do
     GenServer.cast(peer, {:send_to_owner, term})
+  end
+
+  @doc """
+  Cast a message to a specific role
+  """
+  @spec cast_role(pid, module, any) :: :ok
+  def cast_role(peer, role, message) do
+    GenServer.cast(peer, {:cast_role, {role, message}})
   end
 
   # GenServer Callbacks
@@ -103,6 +113,15 @@ defmodule Spell.Peer do
     {:noreply, state}
   end
 
+  def handle_cast({:cast_role, {role, message}},  state) do
+    case Role.cast(state.role.state, role, message) do
+      {:ok, role_state} ->
+        {:noreply, put_in(state.role[:state], role_state)}
+      {:error, reason} ->
+        {:stop, {:cast_role, reason}, state}
+    end
+  end
+
   def handle_info({:role_hook, :init},
                   %{role: %{state: nil}} = state) do
     case Role.map_init(state.role.options, state) do
@@ -119,7 +138,7 @@ defmodule Spell.Peer do
   def handle_info({:transport, :reconnect},
                   %{transport: %{pid: nil} = transport,
                     serializer: serializer} = state) do
-    # NB: role state's aren't reset. TBD if this is a good thing
+    # WARNING: role state's aren't reset. TBD if this is a good thing
     case transport.module.connect(serializer.module.name(),
                                   transport.options) do
       {:ok, pid} ->
@@ -146,7 +165,7 @@ defmodule Spell.Peer do
       {:ok, message} ->
         case Role.map_handle_message(state.role.state, message, self()) do
           {:ok, role_state} ->
-            :ok = send_from(state.owner, message)
+            #:ok = send_from(state.owner, message)
             {:noreply, put_in(state.role[:state], role_state)}
           {:error, reason} ->
             {:stop, {{:role_hook, :handle_message}, reason}, state}
@@ -207,8 +226,10 @@ defmodule Spell.Peer do
       |> normalize_options()
   end
 
-  defp normalize_options(%{transport: {transport_module, transport_options},
-                           serializer: {serializer_module, serializer_options},
+      defp normalize_options(%{transport: {transport_module,
+                                           transport_options},
+                           serializer: {serializer_module,
+                                        serializer_options},
                            role: %{options: role_options}} = options)
       when is_atom(transport_module) and is_list(transport_options)
        and is_atom(serializer_module) and is_list(serializer_options)
@@ -216,7 +237,8 @@ defmodule Spell.Peer do
     {:ok, options}
   end
 
-  defp normalize_options(_transport, _serializer, _role_options) do
+  defp normalize_options(_options) do
     {:error, :bad_options}
   end
+
 end

@@ -19,6 +19,15 @@ defmodule Spell.Role do
     quote do
       @behaviour Spell.Role
 
+      # Helper Functions
+
+      @spec send_message(Spell.Message.t) :: :ok
+      defp send_message(message) do
+        Spell.Peer.send_message(self(), message)
+      end
+
+      # Default Role Callbacks
+
       def get_features(_options),      do: nil
 
       def init(peer_options, options), do: {:ok, options}

@@ -57,8 +57,10 @@ defmodule Spell.Role.Session do
    * ABORT: close the connection with an error. With the default supervision
      settings, the peer will be restarted.
   """
-  def handle_message(%Message{type: :welcome, args: [session, details]},
-             peer, state) do
+  def handle_message(%Message{type: :welcome,
+                              args: [session, details]} = message,
+                     peer, state) do
+    :ok = Peer.send_to_owner(peer, message)
     {:ok, %{state | session: session, details: details}}
   end
 
@@ -70,9 +72,13 @@ defmodule Spell.Role.Session do
     {:error, abort}
   end
 
+  def handle_message(_message, _peer, state) do
+    {:ok, state}
+  end
+
   # Private Functions
 
-  defp new_hello(realm, details \\ %{}) do
+  defp new_hello(realm, details) do
     Message.new(type: :hello, args: [realm, details])
   end
 
