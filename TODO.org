@@ -1,27 +1,37 @@
 * TODO Peer
 
-** TODO Websocket Transport
+- [ ] Close connection (supervised and standalone)
+
+** DONE Websocket Transport
 
 - [X] spec out the transportable protocol
-- [ ] implement transportable protocol for websocket
+- [X] implement transportable protocol for websocket
 - [X] test transport connection to websocket server
   
-** TODO Serialization
+** DONE Serialization
 
-- [ ] spec out the serialization behaviour
-- [ ] implement serialization behaviour for json
-  Interestingly crossbar doesn't support msgpack
+- [X] spec out the serialization behaviour
+- [X] implement serialization behaviour for json
+
+** TODO Roles
+
+- [-] Fixes
+  - [X] Role callbacks shouldn't accept peer (it's =self()=)
+    as an argument.
+  - [X] Roles should interact with peer state directly
+    (see =send_message/2=, =send_to_owner/2=)
+  - [ ] Roles should use a sync `handle_call` instead  of `handle_cast`?
 
 * TODO Documentation
 
 - [ ] upload and link to hexdocs
 - [ ] add example usage to spell.ex
+- [ ] document creating new roles
 
 * TODO Testing
 
 - [X] start crossbar server for tests
-- Maybe?
-  - [ ] build scripts to setup crossbar
 - [ ] espec
   My one blocker with espec is having a global setup/teardown -- AFAIK
   espec's coarsest granularity is per context.
+- [ ] Dialyzer

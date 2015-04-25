@@ -21,11 +21,6 @@ defmodule Spell.Role do
 
       # Helper Functions
 
-      @spec send_message(Spell.Message.t) :: :ok
-      defp send_message(message) do
-        Spell.Peer.send_message(self(), message)
-      end
-
       # Default Role Callbacks
 
       def get_features(_options),      do: nil
@@ -38,14 +33,14 @@ defmodule Spell.Role do
 
       def handle_message(_, _, state), do: {:ok, state}
 
-      def handle_cast(_cast, state),   do: {:ok, state}
+      def handle_cast(_, _, state),    do: {:ok, state}
 
       defoverridable [get_features: 1,
                       init: 2,
                       on_open: 2,
                       on_close: 2,
                       handle_message: 3,
-                      handle_cast: 2]
+                      handle_cast: 3]
     end
 
   end
@@ -69,25 +64,27 @@ defmodule Spell.Role do
   ok tuple or an error tuple.
 
   """
-  defcallback on_open(peer :: pid, state :: any) :: {:ok, any} | {:error, any}
+  defcallback on_open(peer :: Peer.t, state :: any) ::
+    {:ok, any} | {:error, any}
 
   @doc """
   Called when the connection is being closed. Returns the state wrapped in
   an ok tuple or an error tuple
   """
-  defcallback on_close(peer :: pid, state :: any) :: {:ok, any} | {:error, any}
+  defcallback on_close(peer :: Peer.t, state :: any) ::
+    {:ok, any} | {:error, any}
 
   @doc """
   Handle an incoming WAMP message.
   """
   defcallback handle_message(message :: Message.t,
-                             peer :: pid, state :: any) ::
+                             peer :: Peer.t, state :: any) ::
     {:ok, any} | {:error, any}
 
   @doc """
   Handle a cast sent to the peer.
   """
-  defcallback handle_cast(message :: any, state :: any) ::
+  defcallback handle_cast(message :: any, peer :: Peer.t, state :: any) ::
     {:ok, any} | {:error, any}
 
   # Public Functions
@@ -151,7 +148,7 @@ defmodule Spell.Role do
   @doc """
   Call the `on_open` function for a list of roles.
   """
-  @spec map_on_open([{module, any}], pid) ::
+  @spec map_on_open([{module, any}], Peer.t) ::
     {:ok, [{module, any}]} | {:error, any}
   def map_on_open(roles, peer) do
     case map(roles, fn {role, state} -> role.on_open(peer, state) end) do
@@ -165,7 +162,7 @@ defmodule Spell.Role do
   @doc """
   Call the `on_close` function for a list of roles.
   """
-  @spec map_on_close([{module, any}], pid) ::
+  @spec map_on_close([{module, any}], Peer.t) ::
     {:ok, [{module, any}]} | {:error, any}
   def map_on_close(roles, peer) do
     case map(roles, fn {role, state} -> role.on_close(peer, state) end) do
@@ -177,9 +174,9 @@ defmodule Spell.Role do
   end
 
   @doc """
-  Call the `on_close` function for a list of roles.
+  Call the `handle_message` function for a list of roles.
   """
-  @spec map_handle_message([{module, any}], Message.t, pid) ::
+  @spec map_handle_message([{module, any}], Message.t, Peer.t) ::
     {:ok, [{module, any}]} | {:error, any}
   def map_handle_message(roles, message, peer) do
     case map(roles, fn {r, s} -> r.handle_message(message, peer, s) end) do
@@ -195,12 +192,12 @@ defmodule Spell.Role do
 
   TODO: error handling for the `handle_cast/2` call?
   """
-  @spec cast([{module, any}], module, any) ::
+  @spec cast([{module, any}], module, Peer.t, any) ::
     {:ok, [{module, any}]} | {:error, :no_role}
-  def cast(roles, role, message) do
+  def cast(roles, role, peer, message) do
     case Keyword.fetch(roles, role) do
       {:ok, role_state} ->
-        case role.handle_cast(message, role_state) do
+        case role.handle_cast(message, peer, role_state) do
           {:ok, role_state} ->
             {:ok, Keyword.put(roles, role, role_state)}
           {:error, reason} ->

@@ -2,7 +2,7 @@ defmodule Spell.Peer do
   @moduledoc """
   The `Spell.Peer` module implements the general WAMP peer behaviour.
 
-  From the docuemntation:
+  From the documentation:
 
   > A WAMP Session connects two Peers, a Client and a Router. Each WAMP
   > Peer can implement one or more roles.
@@ -78,30 +78,46 @@ defmodule Spell.Peer do
                            [[{:owner, self()} | options]])
   end
 
-  @doc """
-  Send a message via the peer.
-  """
-  @spec send_message(pid, Message.t) :: :ok
-  def send_message(peer, %Message{} = message) do
-    GenServer.cast(peer, {:send_message, message})
-  end
+  # Public Role Interface
 
   @doc """
-  Send a message to the peer's owner.
-
-  TODO: This is inefficient -- roles should send using the peer state.
-  """
-  @spec send_to_owner(pid, any) :: :ok
-  def send_to_owner(peer, term) do
-    GenServer.cast(peer, {:send_to_owner, term})
-  end
-
-  @doc """
-  Cast a message to a specific role
+  Cast a message to a specific role.
   """
   @spec cast_role(pid, module, any) :: :ok
   def cast_role(peer, role, message) do
     GenServer.cast(peer, {:cast_role, {role, message}})
+  end
+
+  @doc """
+  Send a WAMP message from the peer.
+
+  If a pid is provided as the peer, the message will be cast to and
+  sent from the peer process. If it is the peer state, the message
+  is sent directly.
+  """
+  @spec send_message(pid | t, Message.t) :: :ok | {:error, any}
+  def send_message(peer, %Message{} = message) when is_pid(peer) do
+    GenServer.cast(peer, {:send_message, message})
+  end
+  def send_message(%__MODULE__{transport: transport, serializer: serializer},
+                   %Message{} = message) do
+    case serializer.module.encode(message) do
+      {:ok, raw_message} ->
+        transport.module.send_message(transport.pid,
+                                      raw_message)
+
+      {:error, reason} ->
+        {:error, {serializer.module, reason}}
+    end
+  end
+
+  @doc """
+  Send an Erlang message to the peer's owner.
+  """
+  @spec send_to_owner(pid, any) :: :ok
+  def send_to_owner(peer, term) do
+    send(peer.owner, {__MODULE__, self(), term})
+    :ok
   end
 
   # GenServer Callbacks
@@ -127,22 +143,14 @@ defmodule Spell.Peer do
   end
 
   def handle_cast({:send_message, %Message{} = message}, state) do
-    case state.serializer.module.encode(message) do
-      {:ok, raw_message} ->
-        :ok = state.transport.module.send_message(state.transport.pid,
-                                                  raw_message)
-        {:noreply, state}
-      # {:error, reason} -> {:noreply, state}
+    case send_message(state, message) do
+      :ok              -> {:noreply, state}
+      {:error, reason} -> {:stop, {:send_message, reason}, state}
     end
   end
 
-  def handle_cast({:send_to_owner, term}, state) do
-    :ok = send_from(state.owner, term)
-    {:noreply, state}
-  end
-
-  def handle_cast({:cast_role, {role, message}},  state) do
-    case Role.cast(state.role.state, role, message) do
+  def handle_cast({:cast_role, {role, message}}, state) do
+    case Role.cast(state.role.state, role, state, message) do
       {:ok, role_state} ->
         {:noreply, put_in(state.role[:state], role_state)}
       {:error, reason} ->
@@ -179,7 +187,7 @@ defmodule Spell.Peer do
   end
 
   def handle_info({:role_hook, :on_open}, state) do
-    case Role.map_on_open(state.role.state, self()) do
+    case Role.map_on_open(state.role.state, state) do
       {:ok, role_state} ->
         {:noreply, put_in(state.role[:state], role_state)}
       {:error, reason} ->
@@ -191,7 +199,7 @@ defmodule Spell.Peer do
                   %{transport: %{module: module, pid: pid}} = state) do
     case state.serializer.module.decode(raw_message) do
       {:ok, message} ->
-        case Role.map_handle_message(state.role.state, message, self()) do
+        case Role.map_handle_message(state.role.state, message, state) do
           {:ok, role_state} ->
             #:ok = send_from(state.owner, message)
             {:noreply, put_in(state.role[:state], role_state)}
@@ -210,12 +218,6 @@ defmodule Spell.Peer do
   end
 
   # Private Functions
-
-  @spec send_from(pid, any) :: :ok
-  defp send_from(pid, message) do
-    send(pid, {__MODULE__, self(), message})
-    :ok
-  end
 
   @spec normalize_options(Keyword.t) :: tuple
   defp normalize_options(options) when is_list(options) do

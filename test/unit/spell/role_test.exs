@@ -83,9 +83,9 @@ defmodule Spell.RoleTest do
   end
 
   test "map_handle_cast/2" do
-    assert {:error, :no_role} == Role.cast([], :role, :peer)
-    assert {:ok, [{Spell.RoleTest.MapRole, :state}]} ==
-      Role.cast([{MapRole, :state}], MapRole, :peer)
+    assert {:error, :no_role} == Role.cast([], :role, :peer, :state)
+    assert {:ok, [{Spell.RoleTest.MapRole, {:casted, :state}}]} ==
+      Role.cast([{MapRole, :state}], MapRole, :peer, :state)
   end
 
 end

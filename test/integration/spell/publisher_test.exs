@@ -11,9 +11,9 @@ defmodule Spell.PublisherTest do
 
   setup do
     {:ok, peer} = Peer.new(transport: Crossbar.config,
-                                  features: %{publisher: %{}},
-                                  roles: [{Session, [realm: @realm]},
-                                          Publisher])
+                           features: %{publisher: %{}},
+                           roles: [{Session, [realm: @realm]},
+                                   Publisher])
     receive do
       {Spell.Peer, ^peer, %{type: :welcome}} ->
         {:ok, [peer: peer]}

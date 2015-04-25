@@ -51,9 +51,9 @@ defmodule Spell.Role.Publisher do
     {:ok, state}
   end
 
-  def handle_cast({:publish, %{type: :publish} = publish}, state) do
+  def handle_cast({:publish, %{type: :publish} = publish}, peer, state) do
     # TODO: Check for acknowledge option and save publish id if present
-    :ok = send_message(publish)
+    :ok = Peer.send_message(peer, publish)
     {:ok, state}
   end
 
