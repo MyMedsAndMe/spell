@@ -11,9 +11,11 @@ defmodule Spell.SubscribeTest do
 
   setup do
     {:ok, peer} = Peer.new(transport: Crossbar.config,
-                           features: %{publisher: %{}},
-                           roles: [{Session, [realm: @realm]},
-                                   Subscriber])
+                           realm: @realm,
+                           roles: [Session, Subscriber])
+    on_exit fn ->
+      Peer.stop(peer)
+    end
     receive do
       {Spell.Peer, ^peer, %{type: :welcome}} ->
         {:ok, [peer: peer]}

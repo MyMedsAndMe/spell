@@ -29,6 +29,7 @@ defmodule Spell do
   use Application
 
   alias Spell.Peer
+  alias Spell.Message
   alias Spell.Transport
   alias Spell.Serializer
   alias Spell.Role
@@ -40,22 +41,42 @@ defmodule Spell do
   # Public API
 
   @doc """
-  Connect to `uri`.
+  Create a new peer and connect it to `uri`.
+
+  TODO: This function is a mess
   """
-  @spec new_peer(String.t) :: {:ok, pid}
-  def new_peer(uri, options \\ [])
+  @spec connect(String.t) :: {:ok, pid}
+  def connect(uri, options \\ [])
       when is_binary(uri) and is_list(options) do
     case parse_uri(uri) do
       {:ok, %{protocol: :ws, host: host, port: port, path: path}} ->
-        Peer.add(transport: {Transport.WebSocket,
-                             host: host, port: port, path: path},
-                 serializer: Serializer.JSON,
-                 roles: [{Role.Session, [realm: "realm1"]},
-                         Role.Publisher,
-                         Role.Subscriber])
+        # TODO: merge options
+        {:ok, peer} = [transport: {Transport.WebSocket,
+                     host: host, port: port, path: path},
+         serializer: Serializer.JSON,
+         realm: "realm1",
+         roles: [Role.Session,
+                 Role.Publisher,
+                 Role.Subscriber]]
+          |> Dict.merge(options)
+          |> Peer.add()
+          case Role.Session.await_welcome(peer) do
+            {:ok, _welcome}  -> {:ok, peer}
+            {:error, reason} -> {:error, reason}
+          end
     end
-    end
+  end
 
+  @doc """
+  Close the peer by sending a GOODBYE message.
+  """
+  @spec close(pid) :: Message.t | {:error, any}
+  def close(peer, options \\ []) do
+    case Role.Session.call_goodbye(peer, options) do
+      {:ok, _goodbye}   -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   # Application Callbacks
 

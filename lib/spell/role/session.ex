@@ -22,6 +22,41 @@ defmodule Spell.Role.Session do
 
   @goodbye_and_out "wamp.error.goodbye_and_out"
 
+  # Public Functions
+
+  @doc """
+  Send a GOODBYE message to the remote peer. The remote peer should
+  reply with a GOODBYE.
+  """
+  @spec cast_goodbye(pid, Keyword.t) :: :ok
+  def cast_goodbye(peer, options \\ []) do
+    reason = Keyword.get(options, :reason, @goodbye_and_out)
+    details = Keyword.get(options, :details, %{})
+    {:ok, message} = new_goodbye(reason, details)
+    Peer.send_message(peer, message)
+  end
+
+  @doc """
+  Send a GOODBYE message to the remote peer and wait for the GOODBYE reply.
+
+  This must be called from the peer's owner, otherwise the listening
+  process won't receive the GOODBYE message.
+
+  TODO: raise an error if not called from the owner process
+  """
+  @spec call_goodbye(pid, Keyword.t) :: {:ok, Message.t} | {:error, :timeout}
+  def call_goodbye(peer, options \\ []) do
+    timeout = Keyword.get(options, :timeout, 1000)
+    :ok = cast_goodbye(peer, options)
+    Peer.await(peer, :goodbye, timeout)
+  end
+
+  @doc """
+  Await the welcome message. Useful for blocking until the session is
+  established.
+  """
+  @spec await_welcome(pid) :: {:ok, Message.t} | {:error, :timeout}
+  def await_welcome(peer), do: Peer.await(peer, :welcome)
 
   # Role Callbacks
 
@@ -30,10 +65,11 @@ defmodule Spell.Role.Session do
 
    * `peer_options :: Map.t`
   """
-  def init(peer_options, session_options) do
-    {:ok, struct(%__MODULE__{},
-                 [{:roles, peer_options.role.features}
-                  | session_options])}
+  def init(%{realm: nil}, _) do
+    {:error, :no_realm}
+  end
+  def init(%{realm: realm, role: role}, []) when is_binary(realm) do
+    {:ok, %__MODULE__{realm: realm, roles: role.features}}
   end
 
   @doc """
@@ -58,17 +94,19 @@ defmodule Spell.Role.Session do
      settings, the peer will be restarted.
   """
   def handle_message(%Message{type: :welcome,
-                              args: [session, details]} = message,
+                              args: [session, details]} = welcome,
                      peer, state) do
-    :ok = Peer.send_to_owner(peer, message)
+    :ok = Peer.send_to_owner(peer, welcome)
     {:ok, %{state | session: session, details: details}}
   end
 
-  def handle_message(%Message{type: :goodbye} = goodbye, _peer, state) do
+  def handle_message(%Message{type: :goodbye} = goodbye, peer, state) do
+    :ok = Peer.send_to_owner(peer, goodbye)
     {:close, goodbye, state}
   end
 
   def handle_message(%Message{type: :abort} = abort, _peer, _state) do
+    # TODO: test against various abort messages
     {:error, abort}
   end
 
@@ -78,11 +116,14 @@ defmodule Spell.Role.Session do
 
   # Private Functions
 
+  @spec new_hello(String.t, map) :: {:ok, Message.t} | {:error, any}
   defp new_hello(realm, details) do
     Message.new(type: :hello, args: [realm, details])
   end
 
-  defp new_goodbye(reason \\ @goodbye_and_out, details \\ %{}) do
+  @spec new_goodbye(String.t, map) :: {:ok, Message.t} | {:error, any}
+  defp new_goodbye(reason, details) do
+    # TODO: if `reason` is an atom, lookup its value
     Message.new(type: :goodbye, args: [details, reason])
   end
 

@@ -134,15 +134,9 @@ defmodule Spell.Role do
   @spec map_init([{module, any}], Keyword.t) ::
     {:ok, [{module, any}]} | {:error, any}
   def map_init(roles, peer_options) do
-    mapper = fn {role, role_options} ->
+    map(roles, fn {role, role_options} ->
       role.init(peer_options, role_options)
-    end
-    case map(roles, mapper) do
-      {:ok, results} ->
-        {:ok, (for {r, _} <- roles, do: r) |> Enum.zip(results)}
-      {:error, reason} ->
-        {:error, reason}
-    end
+    end)
   end
 
   @doc """
@@ -151,12 +145,7 @@ defmodule Spell.Role do
   @spec map_on_open([{module, any}], Peer.t) ::
     {:ok, [{module, any}]} | {:error, any}
   def map_on_open(roles, peer) do
-    case map(roles, fn {role, state} -> role.on_open(peer, state) end) do
-      {:ok, results} ->
-        {:ok, (for {r, _} <- roles, do: r) |> Enum.zip(results)}
-      {:error, reason} ->
-        {:error, reason}
-    end
+    map(roles, fn {role, state} -> role.on_open(peer, state) end)
   end
 
   @doc """
@@ -165,12 +154,7 @@ defmodule Spell.Role do
   @spec map_on_close([{module, any}], Peer.t) ::
     {:ok, [{module, any}]} | {:error, any}
   def map_on_close(roles, peer) do
-    case map(roles, fn {role, state} -> role.on_close(peer, state) end) do
-      {:ok, results} ->
-        {:ok, (for {r, _} <- roles, do: r) |> Enum.zip(results)}
-      {:error, reason} ->
-        {:error, reason}
-    end
+    map(roles, fn {role, state} -> role.on_close(peer, state) end)
   end
 
   @doc """
@@ -179,12 +163,7 @@ defmodule Spell.Role do
   @spec map_handle_message([{module, any}], Message.t, Peer.t) ::
     {:ok, [{module, any}]} | {:error, any}
   def map_handle_message(roles, message, peer) do
-    case map(roles, fn {r, s} -> r.handle_message(message, peer, s) end) do
-      {:ok, results} ->
-        {:ok, (for {r, _} <- roles, do: r) |> Enum.zip(results)}
-      {:error, reason} ->
-        {:error, reason}
-    end
+    map(roles, fn {r, s} -> r.handle_message(message, peer, s) end)
   end
 
   @doc """
@@ -211,20 +190,28 @@ defmodule Spell.Role do
   # Private Functions
 
   @spec map([module], ((any) -> {:ok, any} | {:error, any}),
-            Keyword.t) ::
-    {:ok, [any]} | {:error, any}
-  defp map(roles, function, results \\ [])
+            Keyword.t, Keyword.t) ::
+    {:ok, Keyword.t} | {:close, Keyword.t, Keyword.t} | {:error, any}
+  defp map(roles, function, results \\ [], reasons \\ [])
 
-  defp map([], _function, results) do
+  defp map([], _function, results, []) do
     {:ok, Enum.reverse(results)}
   end
-
-  defp map([role | roles], function, results) do
-    case function.(role) do
-      {:ok, result}    -> map(roles, function, [result | results])
-      {:error, reason} -> {:error, {role, reason}}
-    end
+  defp map([], _function, results, reasons) do
+    {:close, Enum.reverse(reasons), Enum.reverse(reasons)}
   end
 
+  defp map([{role_module, _} = role | roles], function, results, reasons) do
+    case function.(role) do
+      {:ok, result} ->
+        map(roles, function, [{role_module, result} | results], reasons)
+      {:close, reason, result} ->
+        map(roles, function,
+            [{role_module, result} | results],
+            [{role_module, reason} | reasons])
+      {:error, reason} ->
+        {:error, {role, reason}}
+    end
+  end
 
 end

@@ -22,10 +22,16 @@ defmodule Spell.Peer do
   @default_serializer_module Spell.Serializer.JSON
   @default_transport_module  Spell.Transport.WebSocket
 
+  @default_retries           5
+  @default_retry_interval    1000
+
   defstruct [:transport,
              :serializer,
              :owner,
-             :role]
+             :role,
+             :realm,
+             :retries,
+             :retry_interval]
 
   # Type Specs
 
@@ -34,10 +40,12 @@ defmodule Spell.Peer do
    | {:transport, {module, Keyword.t}}
 
   @type t :: %__MODULE__{
-    transport:  map,
-    serializer: module,
-    owner:      pid,
-    role:       map}
+    transport:      map,
+    serializer:     map,
+    owner:          pid,
+    role:           map,
+    retry_interval: integer,
+    retries:        integer}
 
   # Public Functions
 
@@ -52,18 +60,29 @@ defmodule Spell.Peer do
   end
 
   @doc """
-  Start a new peer. Can be used to start a child outside of the supervision
-  tree.
+  Start a new peer with `options`. This function can be used to start a child
+  outside of the supervision tree.
 
   ## Options
 
-   * `:transport :: {module, Keyword.t}`
-   * `:serializer :: module`
+   * `:transport :: {module, Keyword.t} | Keyword.t` required
+   * `:realm :: Message.wamp_uri` required
+   * `:serializer :: module` defaults to #{}
    * `:roles :: [{module, Keyword.t}]`
+   * `:owner :: pid`
+   * `:retries :: integer`
+   * `:features :: map`
   """
   @spec new([start_option]) :: {:ok, t} | {:error, any}
   def new(options) when is_list(options) do
     GenServer.start_link(__MODULE__, {self(), options})
+  end
+
+  @doc """
+  Stop the `peer` process.
+  """
+  def stop(peer) do
+    GenServer.cast(peer, :stop)
   end
 
   @doc """
@@ -76,6 +95,21 @@ defmodule Spell.Peer do
   def add(options) do
     Supervisor.start_child(@supervisor_name,
                            [[{:owner, self()} | options]])
+  end
+
+  @doc """
+  Block until the process receives a message from `peer` of `type` or timeout.
+  """
+  @spec await(pid, atom, integer) :: {:ok, t} | {:error, timeout}
+  def await(peer, type, timeout \\ 1000)
+      when is_pid(peer) and is_atom(type) do
+    receive do
+      {__MODULE__, ^peer, %Message{type: ^type} = message} ->
+        {:ok, message}
+    after
+      timeout ->
+        {:error, :timeout}
+    end
   end
 
   # Public Role Interface
@@ -123,21 +157,28 @@ defmodule Spell.Peer do
   # GenServer Callbacks
 
   def init({owner, options}) do
-    # TODO: collection options + handle errors cleanly. extract?
+    # TODO: collection options + handle errors cleanly.
+    # normalize_options should return the state(?)
     case normalize_options(options) do
       {:ok, %{transport: {transport_module, transport_options},
               serializer: {serializer_module, _serializer_options},
               owner: options_owner,
-              role: %{options: role_options, features: role_features}}} ->
+              realm: realm,
+              role: %{options: role_options, features: role_features},
+              retries: retries,
+              retry_interval: retry_interval}} ->
         send(self(), {:role_hook, :init})
         {:ok, %__MODULE__{transport: %{module: transport_module,
                                        options: transport_options,
                                        pid: nil},
                           serializer: %{module: serializer_module},
                           owner: options_owner || owner,
+                          realm: realm,
                           role: %{options: role_options,
                                   state: nil,
-                                  features: role_features}}}
+                                  features: role_features},
+                          retries: retries,
+                          retry_interval: retry_interval}}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -158,6 +199,10 @@ defmodule Spell.Peer do
     end
   end
 
+  def handle_cast(:stop, state) do
+    {:stop, :normal, state}
+  end
+
   def handle_info({:role_hook, :init},
                   %{role: %{state: nil}} = state) do
     case Role.map_init(state.role.options, state) do
@@ -170,11 +215,10 @@ defmodule Spell.Peer do
   end
 
   # Cheers to Fred Hebert's "Stuff Goes Bad"
-  # TODO: Retries
   def handle_info({:transport, :reconnect},
                   %{transport: %{pid: nil} = transport,
                     serializer: serializer} = state) do
-    # WARNING: role state's aren't reset. TBD if this is a good thing
+    # WARNING: role states aren't reset. TBD if this is a good thing
     case transport.module.connect(serializer.module.name(),
                                   transport.options) do
       {:ok, pid} ->
@@ -182,7 +226,7 @@ defmodule Spell.Peer do
         send(self(), {:role_hook, :on_open})
         {:noreply, put_in(state.transport[:pid], pid)}
       {:error, reason} ->
-        {:error, {:transport, reason}}
+        {:stop, {:transport, reason}, state}
     end
   end
 
@@ -201,8 +245,10 @@ defmodule Spell.Peer do
       {:ok, message} ->
         case Role.map_handle_message(state.role.state, message, state) do
           {:ok, role_state} ->
-            #:ok = send_from(state.owner, message)
             {:noreply, put_in(state.role[:state], role_state)}
+          {:close, _reasons, role_state} ->
+            # NOTE: if close == normal, are reasons necessary?
+            {:stop, :normal, put_in(state.role[:state], role_state)}
           {:error, reason} ->
             {:stop, {{:role_hook, :handle_message}, reason}, state}
         end
@@ -211,16 +257,21 @@ defmodule Spell.Peer do
     end
   end
 
-  # NOTE: transport errors
   def handle_info({module, pid, {:terminating, reason}},
                   %{transport: %{module: module, pid: pid}} = state) do
-    {:stop, reason, state}
+    # NOTE: the transport closed
+    {:stop, {:transport, reason}, state}
+  end
+
+  def terminate(reason, _state) do
+    Logger.debug(fn -> "Peer terminating due to: #{inspect(reason)}" end)
   end
 
   # Private Functions
 
   @spec normalize_options(Keyword.t) :: tuple
   defp normalize_options(options) when is_list(options) do
+    # TODO: This function is a mess. Eagerly awaiting extract :)
     case Dict.get(options, :roles, []) |> Role.normalize_role_options() do
       {:ok, role_options} ->
         %{transport: Dict.get(options, :transport),
@@ -229,7 +280,11 @@ defmodule Spell.Peer do
           owner: Dict.get(options, :owner),
           role: %{options: role_options,
                   features: Dict.get(options, :features,
-                                     Role.collect_features(role_options))}}
+                                     Role.collect_features(role_options))},
+          realm: Dict.get(options, :realm),
+          retries: Dict.get(options, :retries, @default_retries),
+          retry_interval: Dict.get(options, :retry_interval,
+                                   @default_retry_interval)}
           |> normalize_options()
       {:error, reason} -> {:error, {:role, reason}}
     end
@@ -257,7 +312,7 @@ defmodule Spell.Peer do
       |> normalize_options()
   end
 
-      defp normalize_options(%{transport: {transport_module,
+  defp normalize_options(%{transport: {transport_module,
                                            transport_options},
                            serializer: {serializer_module,
                                         serializer_options},

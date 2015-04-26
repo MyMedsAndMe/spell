@@ -1,6 +1,9 @@
 * TODO Peer
 
-- [ ] Close connection (supervised and standalone)
+- [ ] Retry on connection fail
+- [X] Close connection (supervised and standalone)
+- [ ] Error handling
+- [X] Add =realm= and =retry_interval= to peer options
 
 ** DONE Websocket Transport
 
@@ -30,6 +33,7 @@
 
 * TODO Testing
 
+- [ ] Mock out peer transport + unit test it
 - [X] start crossbar server for tests
 - [ ] espec
   My one blocker with espec is having a global setup/teardown -- AFAIK

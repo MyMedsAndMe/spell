@@ -6,6 +6,8 @@ defmodule SpellTest do
   setup do: {:ok, Crossbar.config}
 
   test "connect/1", config do
-    {:ok, pid} = Crossbar.get_uri(config) |> Spell.new_peer()
+    {:ok, peer} = Crossbar.get_uri(config) |> Spell.connect()
+    assert :ok == Spell.close(peer)
+    :timer.sleep(100)
   end
 end

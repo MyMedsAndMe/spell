@@ -41,7 +41,7 @@ defmodule Spell.Role.Publisher do
   end
 
   def handle_message(%{type: :published,
-                       args: [request, publication]} = message,
+                       args: [_request, _publication]} = message,
                      peer, state) do
     Peer.send_to_owner(peer, message)
     {:ok, state}

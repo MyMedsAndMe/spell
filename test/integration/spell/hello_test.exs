@@ -13,6 +13,9 @@ defmodule Spell.HelloTest do
     {:ok, peer} = Peer.new(transport: {Transport.WebSocket,
                                        Crossbar.config},
                            serializer: Serializer.JSON)
+    on_exit fn ->
+      Peer.stop(peer)
+    end
     {:ok, [peer: peer]}
   end
 
