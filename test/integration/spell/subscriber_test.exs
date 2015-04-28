@@ -6,11 +6,10 @@ defmodule Spell.SubscriberTest do
   alias Spell.Message
 
   @topic "com.spell.test.topic"
-  @realm "realm1"
 
   setup do
     {:ok, peer} = Crossbar.get_uri(Crossbar.config)
-      |> Spell.connect(roles: [Subscriber], realm: @realm)
+      |> Spell.connect(roles: [Subscriber], realm: Crossbar.realm)
     on_exit fn -> Spell.close(peer) end
     {:ok, peer: peer}
   end

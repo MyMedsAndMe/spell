@@ -6,11 +6,9 @@ defmodule SpellTest do
 
   setup do: {:ok, Crossbar.config}
 
-  @realm "realm1"
-
   test "connect/1", config do
     {:ok, peer} = Crossbar.get_uri(config)
-      |> Spell.connect(realm: @realm, roles: [Publisher])
+      |> Spell.connect(realm: Crossbar.realm, roles: [Publisher])
     assert :ok == Spell.close(peer)
   end
 end

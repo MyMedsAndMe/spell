@@ -5,11 +5,9 @@ defmodule Spell.HelloTest do
   alias Spell.Peer
   alias Spell.Message
 
-  @realm "realm1"
-
   setup do
     {:ok, peer} = Crossbar.get_uri(Crossbar.config)
-      |> Spell.connect(realm: @realm, features: %{publisher: %{}})
+      |> Spell.connect(realm: Crossbar.realm, features: %{publisher: %{}})
     on_exit fn -> Spell.close(peer) end
     {:ok, peer: peer}
   end
@@ -24,7 +22,7 @@ defmodule Spell.HelloTest do
   # turn them off or capture stdin.
   @tag pending: true
   test "send_message/2", %{peer: peer} do
-    args = [@realm, %{roles: %{publisher: %{}, subscriber: %{}}}]
+    args = [Crossbar.realm, %{roles: %{publisher: %{}, subscriber: %{}}}]
     # This should kill the role
     assert :ok == Peer.send_message(peer, Message.new!(type: :hello, args: args))
     assert_receive {Peer, ^peer, {:error, _}}

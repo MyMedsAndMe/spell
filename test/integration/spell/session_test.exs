@@ -5,11 +5,9 @@ defmodule Spell.SessionTest do
   alias Spell.Role.Session
   alias Spell.Message
 
-  @realm "realm1"
-
   setup do
     {:ok, peer} = Crossbar.get_uri(Crossbar.config)
-      |> Spell.connect(realm: @realm, features: %{publisher: %{}})
+      |> Spell.connect(realm: Crossbar.realm, features: %{publisher: %{}})
     on_exit fn -> Spell.close(peer) end
     {:ok, peer: peer}
   end

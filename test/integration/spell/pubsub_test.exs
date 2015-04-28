@@ -6,14 +6,13 @@ defmodule Spell.PubSubTest do
   alias Spell.Role.Subscriber
   alias Spell.Message
 
-  @realm "realm1"
   @topic "com.spell.test.pubsub.topic"
 
   setup do
     {:ok, publisher} = Crossbar.get_uri(Crossbar.config)
-      |> Spell.connect(realm: @realm, roles: [Publisher])
+      |> Spell.connect(realm: Crossbar.realm, roles: [Publisher])
     {:ok, subscriber} = Crossbar.get_uri(Crossbar.config)
-      |> Spell.connect(realm: @realm, roles: [Subscriber])
+      |> Spell.connect(realm: Crossbar.realm, roles: [Subscriber])
     on_exit fn ->
       for peer <- [publisher, subscriber], do: Spell.close(peer)
     end

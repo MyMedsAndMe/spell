@@ -68,8 +68,17 @@ defmodule TestHelper do
     @doc """
     Get the config as a uri.
     """
+    @spec get_uri(Keyword.t) :: String.t
     def get_uri(config) do
       "ws://#{config[:host]}:#{config[:port]}#{config[:path]}"
+    end
+
+    @doc """
+    Get the default realm.
+    """
+    @spec realm :: String.t
+    def realm do
+      "realm1"
     end
 
     @doc """
