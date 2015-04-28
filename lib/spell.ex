@@ -47,7 +47,11 @@ defmodule Spell do
                cast_subscribe(peer, topic, options),
                call_subscribe(peer, topic),
                call_subscribe(peer, topic, options)], to: Role.Subscriber
-
+  defdelegate [cast_register(peer, procedure),
+               cast_cast_register(peer, procedure, options),
+               receive_registered(peer, register_id),
+               call_register(peer, topic),
+               call_register(peer, topic, options)], to: Role.Callee
   # Module Attributes
 
   @supervisor_name __MODULE__.Supervisor
