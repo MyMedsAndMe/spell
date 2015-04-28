@@ -21,6 +21,11 @@ defmodule Spell.Role.Callee do
     receive_registered(peer, register_id)
   end
 
+  def cast_yield(peer, invocation, options \\ []) do
+    {:ok, yield} = new_yield_message(invocation, options)
+    Peer.send_message(peer, yield)
+  end
+
   def receive_registered(peer, register_id) do
     receive do
       {Peer, ^peer,
@@ -31,9 +36,19 @@ defmodule Spell.Role.Callee do
     end
   end
 
-  def cast_yield(peer, invocation, options \\ []) do
-    {:ok, yield} = new_yield_message(invocation, options)
-    Peer.send_message(peer, yield)
+  @spec receive_invocation(pid, Message.wamp_id) ::
+    {:ok, map} | {:error, any}
+  def receive_invocation(peer, invocation) do
+    receive do
+      {Peer, ^peer,
+       # TODO: handle arguments
+       %Message{type: :invocation,
+                 args: [^invocation, registration, details]}} ->
+        {:ok, %{id: invocation, registration: registration,
+                details: details}}
+    after
+      1000 -> {:error, :timeout}
+    end
   end
 
   # Role Callbacks

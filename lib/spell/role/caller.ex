@@ -8,6 +8,14 @@ defmodule Spell.Role.Caller do
   alias Spell.Peer
 
 
+  @doc """
+  Using `peer` asynchronously call `procedure` with `options`.
+
+  ## Options
+
+  See `call/3`.
+  """
+  @spec cast_call(pid, Message.wamp_uri, Keyword.t) :: {:ok, integer}
   def cast_call(peer, procedure, options \\ []) do
     {:ok, %{args: [call_id | _]} = register} =
       new_call_message(procedure, options)
@@ -15,11 +23,22 @@ defmodule Spell.Role.Caller do
     {:ok, call_id}
   end
 
+  @doc """
+  Using `peer` synchronously call `procedure` with `options`.
+
+  ## Options
+
+  TODO
+  """
+  @spec call(pid, Message.wamp_uri, Keyword.t) :: {:ok, integer}
   def call(peer, procedure, options \\ []) do
     {:ok, call_id} = cast_call(peer, procedure, options)
     receive_result(peer, call_id)
   end
 
+  @doc """
+  Block to receive from `peer` result of `call_id`.
+  """
   def receive_result(peer, call_id) do
     receive do
       {Peer, ^peer,
