@@ -47,11 +47,19 @@ defmodule Spell do
                cast_subscribe(peer, topic, options),
                call_subscribe(peer, topic),
                call_subscribe(peer, topic, options)], to: Role.Subscriber
+  defdelegate [cast_call(peer, procedure),
+               cast_call(peer, procedure, options),
+               receive_result(peer, call_id),
+               call(peer, procedure),
+               call(peer, procedure, options)], to: Role.Caller
   defdelegate [cast_register(peer, procedure),
-               cast_cast_register(peer, procedure, options),
+               cast_register(peer, procedure, options),
                receive_registered(peer, register_id),
-               call_register(peer, topic),
-               call_register(peer, topic, options)], to: Role.Callee
+               call_register(peer, procedure),
+               call_register(peer, procedure, options),
+               cast_yield(peer, invocation),
+               cast_yield(peer, invocation, options)], to: Role.Callee
+
   # Module Attributes
 
   @supervisor_name __MODULE__.Supervisor
@@ -185,7 +193,7 @@ defmodule Spell do
     {:ok, options}
   end
 
-  defp normalize_options(options) do
+  defp normalize_options(_options) do
     {:error, :bad_options}
   end
 end
