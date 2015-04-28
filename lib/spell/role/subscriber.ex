@@ -8,6 +8,8 @@ defmodule Spell.Role.Subscriber do
   alias Spell.Peer
   alias Spell.Message
 
+  @timeout 1000
+
   # Public Interface
 
   @doc """
@@ -31,7 +33,41 @@ defmodule Spell.Role.Subscriber do
                              args: [^subscribe_id, subscription]}} ->
         {:ok, subscription}
     after
-      1000 -> {:error, :timeout}
+      @timeout -> {:error, :timeout}
+    end
+  end
+
+  @doc """
+  Helper to receive an event for the given peer and subscription.
+
+  If different selective receives for events are needed, roll your own!
+  """
+  @spec receive_event(pid, integer) ::
+    {:ok, %{subscription: integer, publication: integer, details: map,
+            arguments: list, arguments_kw: map}}
+  | {:error, :timeout}
+  def receive_event(peer, subscription)
+      when is_pid(peer) and is_integer(subscription) do
+    receive do
+      {Spell.Peer, ^peer,
+       %Message{type: :event,
+                args: [^subscription, publication, details | rest]}} ->
+        # This would also be useful for RPC -- refactor out to util?
+        {arguments, arguments_kw} = case rest do
+                                      [] ->
+                                        {[], %{}}
+                                      [arguments] ->
+                                        {arguments, %{}}
+                                      [arguments, arguments_kw] ->
+                                        {arguments, arguments_kw}
+                                    end
+        {:ok, %{subscription: subscription,
+                publication: publication,
+                details: details,
+                arguments: arguments,
+                arguments_kw: arguments_kw}}
+    after
+      @timeout -> {:error, :timeout}
     end
   end
 

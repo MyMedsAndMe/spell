@@ -1,29 +1,18 @@
 defmodule Spell do
   @moduledoc """
-  The `Spell` application is a basic WAMP client.
-
-  Spell is
-
-   * Easily extensible
-   * Happy to manage many peers
+  The `Spell` implements and manages WAMP client peers.
 
   ## WAMP Support
 
   Spell supports the
   [basic WAMP profile, RC4](https://github.com/tavendo/WAMP/blob/master/spec/basic.md).
 
-  TODO -- explain what this entails
-
   Client Roles:
 
-   - Publisher
-   - Subscriber
-   - Caller
-   - Callee
-
-  ## Examples
-
-  TODO
+   - Publisher: `Spell.Role.Publisher`
+   - Subscriber: `Spell.Role.Subscriber`
+   - Caller: `Spell.Role.Caller`
+   - Callee: `Spell.Role.Callee`
 
   """
   use Application

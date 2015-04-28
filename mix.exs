@@ -5,7 +5,10 @@ defmodule Spell.Mixfile do
     [app: :spell,
      version: "0.0.1",
      elixir: "~> 1.0",
-     deps: deps]
+     deps: deps,
+     aliases: aliases,
+     preferred_cli_env: [test_unit: :test, test_integration: :test]
+    ]
   end
 
   def application do
@@ -26,4 +29,10 @@ defmodule Spell.Mixfile do
      {:poison, "~> 1.4.0"}
     ]
   end
+
+  defp aliases do
+    [test_unit: "test --exclude integration --exclude pending",
+     test_integration: "test --only integration --exclude pending"]
+  end
+
 end

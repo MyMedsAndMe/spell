@@ -23,6 +23,7 @@ defmodule Spell.PublisherTest do
     refute_receive {Peer, ^peer, %{type: :published}}
   end
 
+  @tag :integration
   test "call_publish/{2,3}", %{peer: peer} do
     {:ok, publication} = Spell.call_publish(peer, @topic)
     assert is_integer(publication)
