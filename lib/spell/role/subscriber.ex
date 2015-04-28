@@ -51,8 +51,8 @@ defmodule Spell.Role.Subscriber do
     {:ok, state}
   end
 
-  def handle_message(_message, _peer, state) do
-    {:ok, state}
+  def handle_message(message, peer, state) do
+    super(message, peer, state)
   end
 
   # Private Functions
