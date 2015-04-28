@@ -75,7 +75,6 @@ defmodule Spell.Peer do
   Stop the `peer` process.
   """
   def stop(peer) do
-    IO.inspect "STOP"
     GenServer.cast(peer, :stop)
   end
 
@@ -198,7 +197,6 @@ defmodule Spell.Peer do
   end
 
   def handle_cast(:stop, state) do
-    IO.inspect "STOPPING"
     {:stop, :normal, state}
   end
 

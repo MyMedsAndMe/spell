@@ -3,7 +3,6 @@ defprotocol Spell.Transport do
   A transport is a process.
   """
   use Behaviour
-  alias Spell.Message
 
   @typep state :: any
 

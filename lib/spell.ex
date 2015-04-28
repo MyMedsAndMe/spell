@@ -34,6 +34,20 @@ defmodule Spell do
   alias Spell.Serializer
   alias Spell.Role
 
+  # Delegate commonly used role functions into Spell.
+  defdelegate [cast_goodbye(peer),
+               cast_goodbye(peer, options),
+               call_goodbye(peer),
+               call_goodbye(peer, options)], to: Role.Session
+  defdelegate [cast_publish(peer, topic),
+               cast_publish(peer, topic, options),
+               call_publish(peer, topic),
+               call_publish(peer, topic, options)], to: Role.Publisher
+  defdelegate [cast_subscribe(peer, topic),
+               cast_subscribe(peer, topic, options),
+               call_subscribe(peer, topic),
+               call_subscribe(peer, topic, options)], to: Role.Subscriber
+
   # Module Attributes
 
   @supervisor_name __MODULE__.Supervisor
@@ -74,7 +88,7 @@ defmodule Spell do
   """
   @spec close(pid) :: Message.t | {:error, any}
   def close(peer, options \\ []) do
-    case Role.Session.call_goodbye(peer, options) do
+    case call_goodbye(peer, options) do
       {:ok, _goodbye}   -> :ok
       {:error, reason} -> {:error, reason}
     end
@@ -168,7 +182,6 @@ defmodule Spell do
   end
 
   defp normalize_options(options) do
-    IO.inspect options
     {:error, :bad_options}
   end
 end

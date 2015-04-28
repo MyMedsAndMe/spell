@@ -18,13 +18,34 @@ defmodule Spell.Role.Publisher do
   # Public Interface
 
   @doc """
-  Publish a message with the given peer.
+  Publish a message from `peer`.
   """
-  def publish(peer, topic, options \\ []) do
-    {:ok, %{args: [request_id | _]} = message} =
+  def cast_publish(peer, topic, options \\ [])
+      when is_pid(peer) and is_binary(topic) and is_list(options) do
+    {:ok, %{args: [request_id | _]} = publish} =
       new_publish_message(topic, options)
-    :ok = Peer.cast_role(peer, __MODULE__, {:publish, message})
+    :ok = Peer.send_message(peer, publish)
     {:ok, request_id}
+  end
+
+  @doc """
+  Synchronously publish a message from `peer` for `topic`.
+  """
+  def call_publish(peer, topic,
+                   options \\ [options: %{acknowledge: true}]) do
+    options = if options[:options] do
+                put_in(options, [:options, :acknowledge], true)
+              else
+                Keyword.put(options, :options, %{acknowledge: true})
+              end
+    {:ok, request_id} = cast_publish(peer, topic, options)
+    receive do
+      {Peer, ^peer, %Message{type: :published,
+                              args: [^request_id, publication]}} ->
+        {:ok, publication}
+    after
+      1000 -> {:error, :timeout}
+    end
   end
 
   # Role Callbacks
@@ -51,12 +72,6 @@ defmodule Spell.Role.Publisher do
     {:ok, state}
   end
 
-  def handle_cast({:publish, %{type: :publish} = publish}, peer, state) do
-    # TODO: Check for acknowledge option and save publish id if present
-    :ok = Peer.send_message(peer, publish)
-    {:ok, state}
-  end
-
   # Private Functions
 
   @spec new_publish_message(Message.wamp_uri, Keyword.t) ::
@@ -65,10 +80,10 @@ defmodule Spell.Role.Publisher do
     # TODO: Allow `publish` messages with partial args
     Message.new(type: :publish,
                 args: [Message.new_id(),
-                       Dict.get(options, :options, %{}),
+                       Keyword.get(options, :options, %{}),
                        topic,
-                       Dict.get(options, :arguments, []),
-                       Dict.get(options, :arguments_kw, %{})])
+                       Keyword.get(options, :arguments, []),
+                       Keyword.get(options, :arguments_kw, %{})])
   end
 
 end

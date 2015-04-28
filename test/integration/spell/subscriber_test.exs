@@ -3,6 +3,7 @@ defmodule Spell.SubscriberTest do
 
   alias TestHelper.Crossbar
   alias Spell.Role.Subscriber
+  alias Spell.Message
 
   @topic "com.spell.test.topic"
   @realm "realm1"
@@ -14,9 +15,15 @@ defmodule Spell.SubscriberTest do
     {:ok, peer: peer}
   end
 
-  test "subscribe/2", %{peer: peer} do
-    {:ok, subscriber_id} = Subscriber.subscribe(peer, @topic)
+  test "cast_subscribe/2", %{peer: peer} do
+    {:ok, subscriber_id} = Subscriber.cast_subscribe(peer, @topic)
     assert is_integer(subscriber_id)
+    assert_receive {Spell.Peer, ^peer, %Message{type: :subscribed}}
+  end
+
+  test "call_subscribe/2", %{peer: peer} do
+    {:ok, subscription} = Subscriber.call_subscribe(peer, @topic)
+    assert is_integer(subscription)
   end
 
 end

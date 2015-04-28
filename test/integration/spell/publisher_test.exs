@@ -15,12 +15,17 @@ defmodule Spell.PublisherTest do
     {:ok, peer: peer}
   end
 
-  test "publish/{2,3}", %{peer: peer} do
+  test "cast_publish/{2,3}", %{peer: peer} do
     {:ok, publish_id} =
-      Publisher.publish(peer, @topic, options: %{acknowledge: true})
+      Spell.cast_publish(peer, @topic, options: %{acknowledge: true})
     assert_receive {Peer, ^peer, %{type: :published,
                                    args: [^publish_id | _]}}
-    {:ok, _} = Publisher.publish(peer, @topic)
+    {:ok, _} = Publisher.cast_publish(peer, @topic)
     refute_receive {Peer, ^peer, %{type: :published}}
+  end
+
+  test "call_publish/{2,3}", %{peer: peer} do
+    {:ok, publication} = Spell.call_publish(peer, @topic)
+    assert is_integer(publication)
   end
 end
