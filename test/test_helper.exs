@@ -162,4 +162,5 @@ defmodule TestHelper do
   end
 end
 
+ExUnit.configure(exclude: [pending: true])
 ExUnit.start(formatters: [ExUnit.CLIFormatter, TestHelper.Crossbar])

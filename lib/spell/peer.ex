@@ -19,12 +19,6 @@ defmodule Spell.Peer do
 
   @supervisor_name __MODULE__.Supervisor
 
-  @default_serializer_module Spell.Serializer.JSON
-  @default_transport_module  Spell.Transport.WebSocket
-
-  @default_retries           5
-  @default_retry_interval    1000
-
   defstruct [:transport,
              :serializer,
              :owner,
@@ -65,23 +59,23 @@ defmodule Spell.Peer do
 
   ## Options
 
-   * `:transport :: {module, Keyword.t} | Keyword.t` required
+   * `:transport :: %{module: module, options: Keyword.t}` required
+   * `:serializer :: %{module: module, options: Keyword.t}` required
    * `:realm :: Message.wamp_uri` required
-   * `:serializer :: module` defaults to #{}
-   * `:roles :: [{module, Keyword.t}]`
-   * `:owner :: pid`
-   * `:retries :: integer`
-   * `:features :: map`
+   * `:roles :: [{module, Keyword.t}]` required
+   * `:features :: map` defaults to result of role's `get_features/1` callback
+   * `:owner :: pid` defaults to self()
   """
-  @spec new([start_option]) :: {:ok, t} | {:error, any}
-  def new(options) when is_list(options) do
-    GenServer.start_link(__MODULE__, {self(), options})
+  @spec new(map | Keyword.t) :: {:ok, pid} | {:error, any}
+  def new(options) when is_map(options) do
+    GenServer.start_link(__MODULE__, options)
   end
 
   @doc """
   Stop the `peer` process.
   """
   def stop(peer) do
+    IO.inspect "STOP"
     GenServer.cast(peer, :stop)
   end
 
@@ -92,9 +86,13 @@ defmodule Spell.Peer do
 
   See `new/1`.
   """
+  @spec add(map | Keyword.t) :: {:ok, pid} | {:error, any}
   def add(options) do
-    Supervisor.start_child(@supervisor_name,
-                           [[{:owner, self()} | options]])
+    options = Dict.update(options, :owner, self(), fn
+      nil       -> self()
+      otherwise -> otherwise
+    end)
+    Supervisor.start_child(@supervisor_name, [options])
   end
 
   @doc """
@@ -156,30 +154,30 @@ defmodule Spell.Peer do
 
   # GenServer Callbacks
 
-  def init({owner, options}) do
-    # TODO: collection options + handle errors cleanly.
-    # normalize_options should return the state(?)
-    case normalize_options(options) do
-      {:ok, %{transport: {transport_module, transport_options},
-              serializer: {serializer_module, _serializer_options},
-              owner: options_owner,
-              realm: realm,
-              role: %{options: role_options, features: role_features},
-              retries: retries,
-              retry_interval: retry_interval}} ->
+  def init(options) do
+    case Enum.into(options, %{}) do
+      %{transport: %{module: transport_module,
+                     options: transport_options},
+        serializer: %{module: serializer_module,
+                      options: _serializer_options},
+        owner: owner,
+        realm: realm,
+        role: %{options: role_options, features: role_features},
+        retries: retries,
+         retry_interval: retry_interval} ->
         send(self(), {:role_hook, :init})
         {:ok, %__MODULE__{transport: %{module: transport_module,
                                        options: transport_options,
                                        pid: nil},
                           serializer: %{module: serializer_module},
-                          owner: options_owner || owner,
+                          owner: owner,
                           realm: realm,
                           role: %{options: role_options,
                                   state: nil,
                                   features: role_features},
                           retries: retries,
                           retry_interval: retry_interval}}
-      {:error, reason} -> {:error, reason}
+      _ -> {:error, :badargs}
     end
   end
 
@@ -200,6 +198,7 @@ defmodule Spell.Peer do
   end
 
   def handle_cast(:stop, state) do
+    IO.inspect "STOPPING"
     {:stop, :normal, state}
   end
 
@@ -260,71 +259,12 @@ defmodule Spell.Peer do
   def handle_info({module, pid, {:terminating, reason}},
                   %{transport: %{module: module, pid: pid}} = state) do
     # NOTE: the transport closed
+    send_to_owner(state, {:error, {:transport, reason}})
     {:stop, {:transport, reason}, state}
   end
 
   def terminate(reason, _state) do
     Logger.debug(fn -> "Peer terminating due to: #{inspect(reason)}" end)
-  end
-
-  # Private Functions
-
-  @spec normalize_options(Keyword.t) :: tuple
-  defp normalize_options(options) when is_list(options) do
-    # TODO: This function is a mess. Eagerly awaiting extract :)
-    case Dict.get(options, :roles, []) |> Role.normalize_role_options() do
-      {:ok, role_options} ->
-        %{transport: Dict.get(options, :transport),
-          serializer: Dict.get(options, :serializer,
-                               @default_serializer_module),
-          owner: Dict.get(options, :owner),
-          role: %{options: role_options,
-                  features: Dict.get(options, :features,
-                                     Role.collect_features(role_options))},
-          realm: Dict.get(options, :realm),
-          retries: Dict.get(options, :retries, @default_retries),
-          retry_interval: Dict.get(options, :retry_interval,
-                                   @default_retry_interval)}
-          |> normalize_options()
-      {:error, reason} -> {:error, {:role, reason}}
-    end
-  end
-
-  defp normalize_options(%{transport: nil}) do
-    {:error, :transport_required}
-  end
-
-  defp normalize_options(%{transport: transport_options} = options)
-      when is_list(transport_options) do
-    %{options | transport: {@default_transport_module, transport_options}}
-      |> normalize_options()
-  end
-
-  defp normalize_options(%{transport: transport_module} = options)
-      when is_atom(transport_module) do
-    %{options | transport: {transport_module, []}}
-      |> normalize_options()
-  end
-
- defp normalize_options(%{serializer: serializer_module} = options)
-      when is_atom(serializer_module) do
-    %{options | serializer: {serializer_module, []}}
-      |> normalize_options()
-  end
-
-  defp normalize_options(%{transport: {transport_module,
-                                           transport_options},
-                           serializer: {serializer_module,
-                                        serializer_options},
-                           role: %{options: role_options}} = options)
-      when is_atom(transport_module) and is_list(transport_options)
-       and is_atom(serializer_module) and is_list(serializer_options)
-       and is_list(role_options) do
-    {:ok, options}
-  end
-
-  defp normalize_options(_options) do
-    {:error, :bad_options}
   end
 
 end

@@ -38,32 +38,34 @@ defmodule Spell do
 
   @supervisor_name __MODULE__.Supervisor
 
+  @default_serializer_module Serializer.JSON
+  @default_transport_module  Transport.WebSocket
+
+  @default_retries           5
+  @default_retry_interval    1000
+
   # Public API
 
   @doc """
   Create a new peer and connect it to `uri`.
-
-  TODO: This function is a mess
   """
   @spec connect(String.t) :: {:ok, pid}
   def connect(uri, options \\ [])
       when is_binary(uri) and is_list(options) do
     case parse_uri(uri) do
       {:ok, %{protocol: :ws, host: host, port: port, path: path}} ->
-        # TODO: merge options
-        {:ok, peer} = [transport: {Transport.WebSocket,
-                     host: host, port: port, path: path},
-         serializer: Serializer.JSON,
-         realm: "realm1",
-         roles: [Role.Session,
-                 Role.Publisher,
-                 Role.Subscriber]]
-          |> Dict.merge(options)
-          |> Peer.add()
-          case Role.Session.await_welcome(peer) do
-            {:ok, _welcome}  -> {:ok, peer}
-            {:error, reason} -> {:error, reason}
-          end
+        transport = %{module: @default_transport_module,
+                      options: [host: host, port: port, path: path]}
+        case Keyword.put(options, :transport, transport) |> normalize_options() do
+          {:ok, options} ->
+            {:ok, peer} = Peer.add(options)
+            case Role.Session.await_welcome(peer) do
+              {:ok, _welcome}  -> {:ok, peer}
+              {:error, reason} -> {:error, reason}
+            end
+          {:error, reason} ->
+            {:error, reason}
+        end
     end
   end
 
@@ -103,5 +105,70 @@ defmodule Spell do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  # TODO: This function is a bit of a mess. Validation utils would be nice
+  @spec normalize_options(Keyword.t) :: tuple
+  defp normalize_options(options) when is_list(options) do
+    case Dict.get(options, :roles, []) |> Role.normalize_role_options() do
+      {:ok, role_options} ->
+        %{transport: Keyword.get(options, :transport),
+          serializer: Keyword.get(options, :serializer,
+                                  @default_serializer_module),
+          owner: Keyword.get(options, :owner),
+          role: %{options: Keyword.put_new(role_options, Role.Session, []),
+                  features: Keyword.get(options, :features,
+                                        Role.collect_features(role_options))},
+          realm: Keyword.get(options, :realm),
+          retries: Keyword.get(options, :retries, @default_retries),
+          retry_interval: Keyword.get(options, :retry_interval,
+                                   @default_retry_interval)}
+          |> normalize_options()
+      {:error, reason} -> {:error, {:role, reason}}
+    end
+  end
+
+  defp normalize_options(%{transport: nil}) do
+    {:error, :transport_required}
+  end
+
+  defp normalize_options(%{transport: transport_options} = options)
+      when is_list(transport_options) do
+    %{options | transport: %{module: @default_transport_module,
+                             options: transport_options}}
+      |> normalize_options()
+  end
+
+  defp normalize_options(%{transport: transport_module} = options)
+      when is_atom(transport_module) do
+    %{options | transport: %{module: transport_module, options: options}}
+      |> normalize_options()
+  end
+
+ defp normalize_options(%{serializer: serializer_module} = options)
+      when is_atom(serializer_module) do
+    %{options | serializer: %{module: serializer_module, options: []}}
+      |> normalize_options()
+  end
+
+  defp normalize_options(%{realm: nil}) do
+    {:error, :realm_required}
+  end
+
+  defp normalize_options(%{transport: %{module: transport_module,
+                                        options: transport_options},
+                           serializer: %{module: serializer_module,
+                                         options: serializer_options},
+                           role: %{options: role_options},
+                           realm: realm} = options)
+      when is_atom(transport_module) and is_list(transport_options)
+       and is_atom(serializer_module) and is_list(serializer_options)
+       and is_list(role_options) and is_binary(realm) do
+    {:ok, options}
+  end
+
+  defp normalize_options(options) do
+    IO.inspect options
+    {:error, :bad_options}
   end
 end

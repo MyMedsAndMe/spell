@@ -4,19 +4,14 @@ defmodule Spell.HelloTest do
   alias TestHelper.Crossbar
   alias Spell.Peer
   alias Spell.Message
-  alias Spell.Transport
-  alias Spell.Serializer
 
   @realm "realm1"
 
   setup do
-    {:ok, peer} = Peer.new(transport: {Transport.WebSocket,
-                                       Crossbar.config},
-                           serializer: Serializer.JSON)
-    on_exit fn ->
-      Peer.stop(peer)
-    end
-    {:ok, [peer: peer]}
+    {:ok, peer} = Crossbar.get_uri(Crossbar.config)
+      |> Spell.connect(realm: @realm, features: %{publisher: %{}})
+    on_exit fn -> Spell.close(peer) end
+    {:ok, peer: peer}
   end
 
   test "new/1", %{peer: peer} do
@@ -24,10 +19,16 @@ defmodule Spell.HelloTest do
     assert is_pid(peer)
   end
 
-  test "send/2", %{peer: peer} do
+
+  # Pending bcause this results in the lobbing of error messages. Need to
+  # turn them off or capture stdin.
+  @tag pending: true
+  test "send_message/2", %{peer: peer} do
     args = [@realm, %{roles: %{publisher: %{}, subscriber: %{}}}]
+    # This should kill the role
     assert :ok == Peer.send_message(peer, Message.new!(type: :hello, args: args))
-    refute_receive {Peer, _pid, %Message{type: :welcome}}
+    assert_receive {Peer, ^peer, {:error, _}}
+    refute_receive {Peer, ^peer, %Message{type: :welcome}}
 
     # TODO: make a pass-through role and check if messages are delivered
   end
