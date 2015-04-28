@@ -46,7 +46,8 @@ defmodule Spell do
   defdelegate [cast_subscribe(peer, topic),
                cast_subscribe(peer, topic, options),
                call_subscribe(peer, topic),
-               call_subscribe(peer, topic, options)], to: Role.Subscriber
+               call_subscribe(peer, topic, options),
+               receive_event(peer, subscription)], to: Role.Subscriber
   defdelegate [cast_call(peer, procedure),
                cast_call(peer, procedure, options),
                receive_result(peer, call_id),

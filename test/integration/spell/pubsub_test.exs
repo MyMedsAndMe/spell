@@ -4,7 +4,6 @@ defmodule Spell.PubSubTest do
   alias TestHelper.Crossbar
   alias Spell.Role.Publisher
   alias Spell.Role.Subscriber
-  alias Spell.Message
 
   @topic "com.spell.test.pubsub.topic"
 
@@ -19,6 +18,7 @@ defmodule Spell.PubSubTest do
     {:ok, publisher: publisher, subscriber: subscriber}
   end
 
+  @tag integration
   test "pubsub end to end", %{publisher: publisher, subscriber: subscriber} do
     {:ok, subscription} = Spell.call_subscribe(subscriber, @topic)
 
@@ -27,10 +27,12 @@ defmodule Spell.PubSubTest do
       {:ok, publication} = Spell.call_publish(publisher, @topic,
                                               arguments: arguments,
                                               arguments_kw: arguments_kw)
-      assert_receive {Spell.Peer, ^subscriber,
-                      %Message{type: :event,
-                               args: [^subscription, ^publication, %{},
-                                      ^arguments, ^arguments_kw]}}
+      assert {:ok, %{subscription: ^subscription,
+                     publication: ^publication,
+                     details: %{},
+                     arguments: ^arguments,
+                     arguments_kw: ^arguments_kw}} =
+        Spell.receive_event(subscriber, subscription)
     end
   end
 
