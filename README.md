@@ -41,7 +41,7 @@ Start an Elixir shell:
 $ mix -S iex
 ```
 
-<a href="#crossbar-install" \>Start up Crossbar.io:
+<a href="#crossbar-install"></a>Start up Crossbar.io:
 
 ```
 Crossbar.start()
@@ -63,7 +63,7 @@ the source code documentation. `Spell` provides an entrypoint:
 iex> h Spell
 ```
 
-Hit <kbd>C-c C-c</kdb> to exit the shell and shutdown Crossbar.
+Hit <kbd>C-c C-c</kbd> to exit the shell and shutdown Crossbar.
 
 ### Peers
 
