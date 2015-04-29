@@ -54,8 +54,6 @@ server from the shell. Something like:
 $ pkill -f crossbar  # a bit dangerous
 ```
 
-TODO: Create an issue for this.
-
 You can find more detailed documentation at any time by checking
 the source code documentation. `Spell` provides an entry point:
 
@@ -63,7 +61,7 @@ the source code documentation. `Spell` provides an entry point:
 iex> h Spell
 ```
 
-Hit <kbd>C-c C-c</kbd> to exit the shell and shutdown Crossbar.
+You can hit <kbd>C-c C-c</kbd> to exit the shell and shutdown Crossbar.
 
 ### Peers
 
@@ -97,11 +95,6 @@ heritage, each peer has an owner, which the peer sends all WAMP related messages
 to. As a result, if you call a synchronous function from a process which isn't
 the target peer's owner, the calling process will never receive the message, the
 command will timeout, and the owner process will receive an unexpected message.
-
-TODO: Open an issue with ideas:
-
-- error if a call is made by a process which isn't the subject peer's owner
-- sending messages to appropriate owner
 
 ### PubSub
 
