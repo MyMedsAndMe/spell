@@ -1,7 +1,6 @@
 defmodule SpellTest do
   use ExUnit.Case
 
-  alias TestHelper.Crossbar
   alias Spell.Role.Publisher
 
   setup do: {:ok, Crossbar.config}

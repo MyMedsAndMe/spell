@@ -1,11 +1,14 @@
 use Mix.Config
 
+log_level = :debug
+
 config :logger,
   handle_otp_reports: true,
-  handle_sasl_reports: true
+  handle_sasl_reports: true,
+  level: log_level
 
 config :logger, :console,
-  level: :info
+  level: log_level
 
 # Import env config
 

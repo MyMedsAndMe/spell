@@ -1,7 +1,6 @@
 defmodule Spell.SessionTest do
   use ExUnit.Case
 
-  alias TestHelper.Crossbar
   alias Spell.Role.Session
   alias Spell.Message
 

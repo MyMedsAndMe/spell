@@ -1,7 +1,6 @@
 defmodule Spell.PubSubTest do
   use ExUnit.Case
 
-  alias TestHelper.Crossbar
   alias Spell.Role.Publisher
   alias Spell.Role.Subscriber
 

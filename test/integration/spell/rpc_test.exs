@@ -1,7 +1,6 @@
 defmodule Spell.RPCTest do
   use ExUnit.Case
 
-  alias TestHelper.Crossbar
   alias Spell.Role.Caller
   alias Spell.Role.Callee
   alias Spell.Message

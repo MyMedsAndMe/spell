@@ -1,7 +1,6 @@
 defmodule Spell.PublisherTest do
   use ExUnit.Case
 
-  alias TestHelper.Crossbar
   alias Spell.Peer
   alias Spell.Role.Publisher
 

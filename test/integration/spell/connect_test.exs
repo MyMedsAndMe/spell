@@ -2,7 +2,6 @@ defmodule Spell.ConnectTest do
   use ExUnit.Case
 
   alias Spell.Transport.WebSocket
-  alias TestHelper.Crossbar
 
   @serializer "json"
 

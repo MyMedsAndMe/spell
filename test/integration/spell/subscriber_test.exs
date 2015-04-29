@@ -1,7 +1,6 @@
 defmodule Spell.SubscriberTest do
   use ExUnit.Case
 
-  alias TestHelper.Crossbar
   alias Spell.Role.Subscriber
   alias Spell.Message
 

@@ -1,41 +1,111 @@
 # Spell
 
-**WARNING** This software has not yet been tested in production, and it will
-eat your pet.
+**Alpha Quality** though it's getting better quickly.
 
 Spell is an [Elixir](http://elixir-lang.org/) [WAMP](http://wamp.ws/) client
 implementing the
 [basic profile](https://github.com/tavendo/WAMP/blob/master/spec/basic.md)
 specification.
 
-Spell is
+Why WAMP?
 
-  - Sync and async calls: use what your problem calls for
-  - Happy to manage many peers: peer processes are supervised, and
-  will retry on connection failure, or restart on an error.
-  - Easily extensible: add new roles, transports, or serializers without
-  changing the core libary.
+[WAMP](http://wamp.ws/) is the Web Application Message Protocol supported by
+[Tavendo](http://tavendo.com/). It's an open standard WebSocket subprotocol that
+provides two application messaging patterns in one unified protocol: Remote
+Procedure Calls + Publish &amp; Subscribe.
 
-WAMP is an open standard WebSocket subprotocol that provides two application
-messaging patterns in one unified protocol: Remote Procedure Calls + Publish
-&amp; Subscribe.
+Why Spell?
 
+- Flexible interface: one line blocking calls or raw message handling -- use
+whichever tool works best.
+- Robust peers: peer processes are supervised, and will restart or retry when
+appropriate.
+- Easy to extend: add new roles, transports, or serializers without changing
+the core libary:
+
+
+Read up on the [pitfall](#pitfall) before using.
 
 ## How it Works
 
-The examples below are abbreviated; most functions can accept additonal keyword
-arguments.
+You can run the examples you're about to run into, though first you'll need
+[crossbar.io](http://crossbar.io/). You might install it via pip:
 
-See Spell's source code documentation for more information:
+```shell
+$ pip install crossbar
+```
+
+Start an Elixir shell:
+
+```bash
+$ mix -S iex
+```
+
+<a href="#crossbar-install" \>Start up Crossbar.io:
+
+```
+Crossbar.start()
+```
+
+There's a bug in the Crossbar termination. You'll have to close the Crossbar.io
+server from the shell. Something like:
+
+```
+pkill -f crossbar  # a bit dangerous
+```
+
+TODO: Create an issue for this.
+
+You can find more detailed documentation at any time by checking
+the source code documentation. `Spell` provides an entrypoint:
 
 ```elixir
 iex> h Spell
 ```
 
+Hit <kbd>C-c C-c</kdb> to exit the shell and shutdown Crossbar.
+
+### Peers
+
+In WAMP, messages are exchanged between peers. Peers are assigned a set of roles
+which define how they handle messages. A client peer (Spell!) may have any
+choice of client roles, and a server peer may have any choice of server roles.
+
+There are two functional groupings of roles:
+
+- PubSub
+  - Publisher
+  - Subscriber
+  - Broker _Server_
+- RPC
+  - Caller
+  - Callee
+  - Dealer _[Server]_
+
+See `Spell.Peer` and `Spell.Role`.
+
+
+#### Pitfall
+
+Spell has a very sharp edge at the moment. In line with it's Erlang socket
+heritage, each peer has an owner, which the peer sends all WAMP related messages
+to. As a result, if you call a synchronous function from a process which isn't
+the target peer's owner, the calling process will never receive the message, the
+command will timeout, and the owner process will receive an unexpected message.
+
+TODO: Open an issue with ideas:
+
+- error if a call is made by a process which isn't the subject peer's owner
+- sending messages to appropriate owner
+
 ### PubSub
 
 Once subscribed to a topic, the subscriber will receive all messages
-published to the topic.
+published to that topic.
+
+(TODO: cut this?) Note: The examples are abbreviated; most functions can accept
+additonal keyword arguments.
+
 
 ```elixir
 # Events must be published to a topic.
@@ -73,7 +143,7 @@ See `Spell.Role.Publisher` and `Spell.Role.Subscriber` for more information.
 
 RPC allows a caller to call a procedure using a remote callee.
 
-For simplicity's sake, let's start with the caller's half.
+Let's start with the caller's half:
 
 ```elixir
 realm = "realm"
@@ -91,6 +161,10 @@ caller = Spell.connect("ws://example.org/path",
                                  arguments: ["args"],
                                  arguments_kw: %{})
 ```
+
+In addition to the synchronous `Spell.call_...` type functions described so far,
+Spell includes asynchronous `Spell.cast_...` functions. To handle the result of
+these messages, either 
 
 Next is a convoluted + contrived example showing managing both the caller and
 the callee from a single process. Note how it uses the asynchronous casts and
@@ -140,14 +214,37 @@ for peer <- [callee, caller], do: Spell.close(peer)
 
 See `Spell.Role.Caller` and `Spell.Role.Callee` for more information.
 
+### Adding New Roles
+
+In Spell, Roles are middleware for handling messages. Technically they're most
+similar to GenEvent handlers: callbacks which are hook into a manager. In this
+case, the manager is a `Spell.Peer` process.
+
+See `Spell.Role` for descriptions of the Role callbacks.
+
+It's easy to get started:
+
+```elixir
+defmodule Broker do
+  use Spell.Role
+
+  def get_features(_options), do: {:broker, %{}}
+
+  def handle_message(%Message{type: :publish} = message, peer, state) do
+    publish(message, peer, state)
+  end
+
+  ... shamelessly skipping the real work.
+end
+
+Spell.Peer.connect(Crossbar.uri, realm: Crossbar.realm, roles: [Broker])
+```
+
 ## Testing
 
-To run Spell's integration tests, you must have [crossbar](http://crossbar.io/)
-installed. Via pip:
+To run Spell's integration tests, you must have
+[crossbar installed](#crossbar-install).
 
-```shell
-$ pip install crossbar
-```
 
 To the tests:
 

@@ -1,7 +1,6 @@
 defmodule Spell.CalleeTest do
   use ExUnit.Case
 
-  alias TestHelper.Crossbar
   alias Spell.Role.Callee
 
   @procedure "com.spell.test.callee.procedure"
