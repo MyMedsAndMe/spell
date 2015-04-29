@@ -4,10 +4,15 @@ defmodule Crossbar do
   stopping the Crossbar server. You might want to use it for running tests or
   interactive development.
 
-  Why does thi module implement the `GenEvent` behavior? It can be hooked into
+  Why does this module implement the `GenEvent` behavior? It can be hooked into
   the `ExUnit.EventManager`:
 
-    ExUnit.start(formatters: [ExUnit.CLIFormatter, Crossbar])
+      ExUnit.start(formatters: [ExUnit.CLIFormatter, Crossbar])
+
+  Useful for interactive development, the Crossbar.io server can be started by
+  calling `start`:
+
+      Crossbar.start()
 
   ## Crossbar.io Dependency
 
@@ -15,9 +20,9 @@ defmodule Crossbar do
   executable](http://crossbar.io/docs/Quick-Start/).  Via
   [pip](https://pypi.python.org/pypi/pip/):
 
-        pip install crossbar
+      pip install crossbar
 
-    """
+  """
 
   use GenEvent
   require Logger

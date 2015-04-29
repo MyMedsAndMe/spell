@@ -2,9 +2,22 @@ defmodule Spell.Role do
   @moduledoc """
   The `Spell.Role` module defines the behaviour of a role in spell.
 
-  A role specifies logic for handling groups of commands. A peer
-  is started with zero or more roles, which the peer uses to configure
-  its state and handle its messages.
+  A role specifies the logic for handling groups of commands. A peer is started
+  with one or more roles, which the peer uses to configure its state and handle
+  its messages.
+
+  ## Callbacks
+
+  A module must implement all `Spell.Role` behaviour callbacks, though the `use
+  Spell.Role` directive provides a sane default implementation for each.
+
+   * `get_features/1`
+   * `init/2`
+   * `on_open/2`
+   * `on_close/2`
+   * `handle_message/3`
+   * `handle_cast/3`
+
   """
   use Behaviour
 
@@ -83,6 +96,8 @@ defmodule Spell.Role do
 
   @doc """
   Handle a cast sent to the peer.
+
+  XXX: this might be deprecated
   """
   defcallback handle_cast(message :: any, peer :: Peer.t, state :: any) ::
     {:ok, any} | {:error, any}
