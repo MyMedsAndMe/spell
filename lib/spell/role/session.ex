@@ -3,11 +3,9 @@ defmodule Spell.Role.Session do
   The `Spell.Role.Session` module implements the behaviour for a session
   role.
 
-  Sessions are pseudo-roles. Unlike other roles, sessions are implicit.
+  Sessions are pseudo-roles; each peer started with `Spell.Connect`
+  has `Spell.Role.Session` added as the first role in `roles`.
 
-  ## TODO
-
-   * Auth
   """
   use Spell.Role
 

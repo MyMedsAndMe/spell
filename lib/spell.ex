@@ -1,6 +1,6 @@
 defmodule Spell do
   @moduledoc """
-  `Spell` is an WAMP client library and an application for managing WAMP peers.
+  `Spell` is a WAMP client library and an application for managing WAMP peers.
 
   ## Examples
 
@@ -100,7 +100,7 @@ defmodule Spell do
   # Public API
 
   @doc """
-  Create a new peer and connect it to `uri`.
+  Creates and returns a new peer with an open WAMP session at `uri`.
 
   ## Options
 

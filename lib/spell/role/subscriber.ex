@@ -26,6 +26,12 @@ defmodule Spell.Role.Subscriber do
     {:ok, subscribe_id}
   end
 
+  @doc """
+  Send a subscribe message from `peer` for `topic` and block until a response is
+  received or timeout.
+  """
+  @spec call_subscribe(pid, Message.wamp_uri, Keyword.t) ::
+    {:ok, Message.wamp_id} | {:error, :timeout}
   def call_subscribe(peer, topic, options \\ []) do
     {:ok, subscribe_id} = cast_subscribe(peer, topic, options)
     receive do
@@ -39,8 +45,6 @@ defmodule Spell.Role.Subscriber do
 
   @doc """
   Helper to receive an event for the given peer and subscription.
-
-  If different selective receives for events are needed, roll your own!
   """
   @spec receive_event(pid, integer) ::
     {:ok, %{subscription: integer, publication: integer, details: map,

@@ -21,10 +21,10 @@ whichever tool works best.
 - Robust peers: peer processes are supervised, and will restart or retry when
 appropriate.
 - Easy to extend: add new roles, transports, or serializers without changing
-the core libary:
+the core library:
 
 
-Read up on the [pitfall](#pitfall) before using.
+Be sure to understand [peer owners](#peer-owner) before using.
 
 ## How it Works
 
@@ -38,26 +38,26 @@ $ pip install crossbar
 Start an Elixir shell:
 
 ```bash
-$ mix -S iex
+$ iex -S mix
 ```
 
 <a href="#crossbar-install"></a>Start up Crossbar.io:
 
 ```
-Crossbar.start()
+iex> Crossbar.start()
 ```
 
 There's a bug in the Crossbar termination. You'll have to close the Crossbar.io
 server from the shell. Something like:
 
 ```
-pkill -f crossbar  # a bit dangerous
+$ pkill -f crossbar  # a bit dangerous
 ```
 
 TODO: Create an issue for this.
 
 You can find more detailed documentation at any time by checking
-the source code documentation. `Spell` provides an entrypoint:
+the source code documentation. `Spell` provides an entry point:
 
 ```elixir
 iex> h Spell
@@ -80,12 +80,17 @@ There are two functional groupings of roles:
 - RPC
   - Caller
   - Callee
-  - Dealer _[Server]_
+  - Dealer _Server_
+
+By default a client peer is started with all four client roles:
+
+```elixir
+Spell.connect("ws://example.org", realm: "realm1")
+```
 
 See `Spell.Peer` and `Spell.Role`.
 
-
-#### Pitfall
+#### Peer Owner
 
 Spell has a very sharp edge at the moment. In line with it's Erlang socket
 heritage, each peer has an owner, which the peer sends all WAMP related messages
@@ -106,23 +111,22 @@ published to that topic.
 (TODO: cut this?) Note: The examples are abbreviated; most functions can accept
 additonal keyword arguments.
 
-
 ```elixir
 # Events must be published to a topic.
 topic = "com.spell.example.pubsub.topic"
 
 # Create a peer with the subscriber role.
-subscriber = Spell.connect("ws://example.org/path",
-                           realm: "example",
+subscriber = Spell.connect(Crossbar.uri,
+                           realm: Crossbar.realm,
                            roles: [Spell.Role.Subscriber])
 
 # `call_subscribe/2,3` synchronously subscribes to the topic.
 {:ok, subscription} = Spell.call_subscribe(subscriber, topic)
 
 # Create a peer with the publisher role.
-publisher = Spell.connect("ws://example.org/path",
-                           realm: "example"
-                           roles: [Spell.Role.Publisher])
+publisher = Spell.connect(Crossbar.uri,
+                          realm: Crossbar.realm,
+                          roles: [Spell.Role.Publisher])
 
 # `call_publish/2,3` synchronously publishes a message to the topic.
 {:ok, publication} = Spell.call_publish(publisher, topic)
@@ -146,50 +150,48 @@ RPC allows a caller to call a procedure using a remote callee.
 Let's start with the caller's half:
 
 ```elixir
-realm = "realm"
-
 # Calls are sent to a particular procedure.
 procedure = "com.spell.example.rpc.procedure"
 
 # Create a peer with the callee role.
-caller = Spell.connect("ws://example.org/path",
-                       realm: realm,
+caller = Spell.connect(Crossbar.uri,
+                       realm: Crossbar.realm,
                        roles: [Spell.Role.Callee])
 
 # `call_register/2,3` synchronously calls the procedure with the arguments.
 {:ok, registration} = Spell.call(subscriber, procedure,
                                  arguments: ["args"],
                                  arguments_kw: %{})
+
+Spell.close(caller)
 ```
 
 In addition to the synchronous `Spell.call_...` type functions described so far,
 Spell includes asynchronous `Spell.cast_...` functions. To handle the result of
-these messages, either 
+these messages you can use a `Spell.receive_...` helper, or, most flexibly,
+use a `receive` clause.
 
-Next is a convoluted + contrived example showing managing both the caller and
-the callee from a single process. Note how it uses the asynchronous casts and
-receive functions to avoid a deadlock. They'll be useful if you'd like to use
-Spell without blocking the calling process.
+Next is a contrived example showing the RPC caller and the callee being used
+from a single process. Note how asynchronous casts and receive functions are
+used to avoid a deadlock.
 
 Note: I omitted the `arguments` and `arguments_kw` options for brevity's sake.
 
 ```elixir
-realm = "realm"
-
 # Calls are sent to a particular procedure.
 procedure = "com.spell.example.rpc.procedure"
 
 # Create a peer with the callee role.
-callee = Spell.connect("ws://example.org/path",
-                       realm: realm,
+callee = Spell.connect(Crossbar.uri,
+                       realm: Crossbar.realm,
                        roles: [Spell.Role.Callee])
 
 # `call_register/2,3` synchronously registers the procedure.
 {:ok, registration} = Spell.call_register(subscriber, procedure)
 
 # Create a peer with the caller role.
-caller = Spell.connect("ws://example.org/path",
-                       realm: realm,
+caller = Spell.connect(Crossbar.uri,
+                       realm: Crossbar.realm,
                        roles: [Spell.Role.Caller])
 
 # `cast_call/2,3` asynchronously calls the procedure.
@@ -217,7 +219,7 @@ See `Spell.Role.Caller` and `Spell.Role.Callee` for more information.
 ### Adding New Roles
 
 In Spell, Roles are middleware for handling messages. Technically they're most
-similar to GenEvent handlers: callbacks which are hook into a manager. In this
+similar to GenEvent handlers: callbacks which are hooked into a manager. In this
 case, the manager is a `Spell.Peer` process.
 
 See `Spell.Role` for descriptions of the Role callbacks.
@@ -246,7 +248,7 @@ To run Spell's integration tests, you must have
 [crossbar installed](#crossbar-install).
 
 
-To the tests:
+To run the tests:
 
 ```shell
 $ mix test              # all tests
@@ -254,8 +256,10 @@ $ mix test_integration  # only integration tests
 $ mix test_unit         # only unit tests
 ```
 
-## Server-Side Peers ?
+## Creating the Documentation
 
-Spell implements peer roles through a middleware-esque framework. Only
-client-side roles have been implemented, but it would be work equally
-well for server-side roles, e.g. dealer and broker.
+To generate HTML from the source code documentation you can run:
+
+```shell
+$ mix docs
+```

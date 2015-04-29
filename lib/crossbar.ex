@@ -104,8 +104,8 @@ defmodule Crossbar do
   Get the config as a uri.
   """
   @spec get_uri(Keyword.t) :: String.t
-  def get_uri(config) do
-    "ws://#{config[:host]}:#{config[:port]}#{config[:path]}"
+  def get_uri(options \\ config()) do
+    "ws://#{options[:host]}:#{options[:port]}#{options[:path]}"
   end
 
   @doc """

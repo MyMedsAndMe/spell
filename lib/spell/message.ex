@@ -1,13 +1,9 @@
 defmodule Spell.Message do
   @moduledoc """
-  The `Spell.Message` module provides the extension point for
-  defining new messages.
+  The `Spell.Message` module defines the struct and functions to
+  back WAMP messages.
 
-
-  ## Types
-
-  ## Examples
-
+  Note that these are distinct from Erlixir's messages.
   """
   # Module Attributes
   defstruct [:type, :code, :args]
