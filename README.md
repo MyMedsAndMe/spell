@@ -215,8 +215,6 @@ In Spell, Roles are middleware for handling messages. Technically they're most
 similar to GenEvent handlers: callbacks which are hooked into a manager. In this
 case, the manager is a `Spell.Peer` process.
 
-See `Spell.Role` for descriptions of the Role callbacks.
-
 It's easy to get started:
 
 ```elixir
@@ -235,6 +233,8 @@ end
 Spell.Peer.connect(Crossbar.uri, realm: Crossbar.realm, roles: [Broker])
 ```
 
+See `Spell.Role` for descriptions of the Role callbacks.
+
 ## Testing
 
 To run Spell's integration tests, you must have
@@ -245,8 +245,8 @@ To run the tests:
 
 ```shell
 $ mix test              # all tests
-$ mix test_integration  # only integration tests
-$ mix test_unit         # only unit tests
+$ mix test.integration  # only integration tests
+$ mix test.unit         # only unit tests
 ```
 
 ## Creating the Documentation
