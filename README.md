@@ -235,6 +235,16 @@ Spell.Peer.connect(Crossbar.uri, realm: Crossbar.realm, roles: [Broker])
 
 See `Spell.Role` for descriptions of the Role callbacks.
 
+## Examples
+
+Look in `examples/` for the scripts.
+
+Some shortcuts to run the examples, entered from Spell's root:
+
+```shell
+$ mix spell.example.pubsub
+```
+
 ## Testing
 
 To run Spell's integration tests, you must have

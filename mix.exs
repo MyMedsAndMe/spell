@@ -18,7 +18,6 @@ defmodule Spell.Mixfile do
 
   def application do
     [applications: [:logger,
-                    # :sasl,
                     :websocket_client,
                     :poison],
     mod: {Spell, []}]
@@ -39,7 +38,9 @@ defmodule Spell.Mixfile do
 
   defp aliases do
     ["test.unit":        "test --exclude integration --exclude pending",
-     "test.integration": "test --only integration --exclude pending"]
+     "test.integration": "test --only integration --exclude pending",
+     "spell.example.pubsub": "run examples/pubsub.exs",
+     "spell.example.rpc":    "run examples/rpc.exs"]
   end
 
   defp docs do
