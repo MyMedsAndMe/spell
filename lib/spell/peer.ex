@@ -211,7 +211,6 @@ defmodule Spell.Peer do
     end
   end
 
-  # Cheers to Fred Hebert's "Stuff Goes Bad"
   def handle_info({:transport, :reconnect},
                   %{transport: %{pid: nil} = transport,
                     serializer: serializer} = state) do
@@ -254,7 +253,7 @@ defmodule Spell.Peer do
     end
   end
 
-  def handle_info({module, pid, {:terminating, reason}},
+  def handle_info({module, pid, {:terminating, {:error, :badframe, reason}}},
                   %{transport: %{module: module, pid: pid}} = state) do
     # NOTE: the transport closed
     send_to_owner(state, {:error, {:transport, reason}})

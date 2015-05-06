@@ -45,12 +45,6 @@ defmodule Spell.Transport.WebSocket do
         Logger.debug(fn -> "Connecting to #{url}..." end)
         :websocket_client.start_link(url, __MODULE__, {self()},
                                      extra_headers: extra_headers)
-          # {:ok, pid} ->
-          #   Logger.debug(fn -> "Successfully connected to #{url}." end)
-          #   {:ok, %__MODULE__{pid: pid, owner: nil, host: host, port: port}}
-          # {:error, reason} ->
-          #   Logger.debug(fn -> "Error [#{url}]: #{inspect(reason)}" end)
-          #   {:error, reason}
       {:error, reason} ->
         {:error, reason}
     end
