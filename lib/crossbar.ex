@@ -117,10 +117,10 @@ defmodule Crossbar do
   end
 
   @doc """
-  Stop the crossbar server.
+  Stop the Crossbar.io server.
 
-    This is a synchronous call.
-    """
+  This is a synchronous call.
+  """
   @spec stop(pid) :: :ok | {:error, :timeout}
   def stop(pid) do
     monitor_ref = Process.monitor(pid)
@@ -131,8 +131,6 @@ defmodule Crossbar do
       @timeout -> {:error, :timeout}
     end
   end
-
-  
 
   # GenEvent Callbacks
 
@@ -173,18 +171,26 @@ defmodule Crossbar do
     {:ok, state}
   end
 
-  def handle_info({WebSocket, _pid, {:terminating,
-                                     {:remote, :closed} = reason}}, state) do
-    {:error, {WebSocket, reason}}
+  def handle_info({Spell.Transport.WebSocket, _pid,
+                   {:terminating, {:remote, :closed}}}, _state) do
+    # Remove the handler when receiving a remote closed message
+    :remove_handler
   end
-  def handle_info(info, state) do
-    Logger.debug("Info: #{inspect info}")
+
+  def handle_info({port, {:data, message}}, %{port: port} = state) do
+    # Handle the stdout data coming in from the port
+    {:ok, state}
+  end
+
+  def handle_info({:EXIT, pid, :normal}, state) do
+    Logger.debug(fn ->
+      "Crossbar received exit: #{inspect(pid)}, state: #{inspect(state)}"
+    end)
     {:ok, state}
   end
 
   def terminate(reason, state) do
-    Logger.warning("Terminating due to: #{reason}")
-    # Dirty, but why not
+    Logger.warning(fn -> "Terminating due to: #{reason}" end)
     handle_event({:suite_finished, nil, nil}, state)
   end
 
@@ -196,8 +202,14 @@ defmodule Crossbar do
   defp await(config, interval, retries) do
     case Spell.Transport.WebSocket.connect("json", config) do
       {:error, :econnrefused} ->
-        :timer.sleep(interval)
-        await(config, interval, retries - 1)
+        # Flush the error message of the linked websocked pid crashing
+        receive do
+          {:EXIT, pid, :normal} when is_pid(pid) ->
+            :timer.sleep(interval)
+            await(config, interval, retries - 1)
+        after
+          100 -> {:error, :error_timeout}
+        end
       {:ok, _pid}      -> :ok
       {:error, reason} -> {:error, reason}
     end
@@ -208,7 +220,6 @@ defmodule Crossbar do
     [{:args, ["start" | arguments]},
      :binary,
      :use_stdio,
-     :stderr_to_stdout,
-     {:packet, 2}]
+     :stderr_to_stdout]
   end
 end
