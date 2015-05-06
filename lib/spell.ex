@@ -141,7 +141,7 @@ defmodule Spell do
   @spec close(pid) :: Message.t | {:error, any}
   def close(peer, options \\ []) do
     case call_goodbye(peer, options) do
-      {:ok, _goodbye}   -> :ok
+      {:ok, _goodbye}  -> :ok
       {:error, reason} -> {:error, reason}
     end
   end

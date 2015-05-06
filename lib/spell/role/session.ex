@@ -18,7 +18,8 @@ defmodule Spell.Role.Session do
 
   defstruct [:realm, :roles, session: nil, details: nil]
 
-  @goodbye_and_out "wamp.error.goodbye_and_out"
+  @goodbye_close_realm "wamp.error.close_realm"
+  @goodbye_and_out     "wamp.error.goodbye_and_out"
 
   # Public Functions
 
@@ -28,8 +29,8 @@ defmodule Spell.Role.Session do
   """
   @spec cast_goodbye(pid, Keyword.t) :: :ok
   def cast_goodbye(peer, options \\ []) do
-    reason = Keyword.get(options, :reason, @goodbye_and_out)
-    details = Keyword.get(options, :details, %{})
+    reason = Keyword.get(options, :reason, @goodbye_close_realm)
+    details = Keyword.get(options, :details, %{message: "goodbye"})
     {:ok, message} = new_goodbye(reason, details)
     Peer.send_message(peer, message)
   end
@@ -39,8 +40,6 @@ defmodule Spell.Role.Session do
 
   This must be called from the peer's owner, otherwise the listening
   process won't receive the GOODBYE message.
-
-  TODO: raise an error if not called from the owner process
   """
   @spec call_goodbye(pid, Keyword.t) :: {:ok, Message.t} | {:error, :timeout}
   def call_goodbye(peer, options \\ []) do

@@ -2,11 +2,12 @@ defmodule Spell.Peer do
   @moduledoc """
   The `Spell.Peer` module implements the general WAMP peer behaviour.
 
-  From the documentation:
+  From the WAMP protocol:
 
   > A WAMP Session connects two Peers, a Client and a Router. Each WAMP
   > Peer can implement one or more roles.
 
+  See `new` for documentation on starting new peers.
   """
   use GenServer
 
@@ -134,9 +135,7 @@ defmodule Spell.Peer do
                    %Message{} = message) do
     case serializer.module.encode(message) do
       {:ok, raw_message} ->
-        transport.module.send_message(transport.pid,
-                                      raw_message)
-
+        transport.module.send_message(transport.pid, raw_message)
       {:error, reason} ->
         {:error, {serializer.module, reason}}
     end
