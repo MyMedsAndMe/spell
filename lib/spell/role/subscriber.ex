@@ -5,6 +5,8 @@ defmodule Spell.Role.Subscriber do
   """
   use Spell.Role
 
+  require Logger
+
   alias Spell.Peer
   alias Spell.Message
 
@@ -75,19 +77,43 @@ defmodule Spell.Role.Subscriber do
     end
   end
 
+  @doc """
+  Asynchronously send an unsubscribe message from `peer` for
+  `subscription`.
+  """
+  @spec cast_unsubscribe(pid, Message.wamp_id) ::
+    {:ok, Message.wamp_id} | {:error, any}
+  def cast_unsubscribe(peer, subscription) do
+    {:ok, %{args: [unsubscribe | _]} = message} =
+      new_unsubscribe_message(subscription)
+    Peer.send_message(peer, message)
+    {:ok, unsubscribe}
+  end
+
+  def call_unsubscribe(peer, subscription) do
+    {:ok, unsubscribe} = cast_unsubscribe(peer, subscription)
+    receive_unsubscribed(peer, unsubscribe)
+  end
+
+  def receive_unsubscribed(peer, unsubscribe) do
+    receive do
+      {Spell.Peer, ^peer,
+        %Message{type: :unsubscribed, args: [^unsubscribe]}} ->
+        :ok
+    after
+      @timeout -> {:error, :timeout}
+    end
+  end
+
   # Role Callbacks
 
   def get_features(_) do
     {:subscriber, %{}}
   end
 
-  def handle_message(%{type: :subscribed} = subscribed, peer, state) do
-    :ok = Peer.send_to_owner(peer, subscribed)
-    {:ok, state}
-  end
-
-  def handle_message(%{type: :event} = event, peer, state) do
-    :ok = Peer.send_to_owner(peer, event)
+  def handle_message(%{type: type} = message, peer, state)
+      when type == :subscribed or type == :unsubscribed or type == :event do
+    :ok = Peer.send_to_owner(peer, message)
     {:ok, state}
   end
 
@@ -104,6 +130,13 @@ defmodule Spell.Role.Subscriber do
                 args: [Message.new_id(),
                        Keyword.get(options, :options, %{}),
                        topic])
+  end
+
+  @spec new_unsubscribe_message(Message.wamp_uri) ::
+    {:ok, Message.t} | {:error, any}
+  defp new_unsubscribe_message(subscription) do
+    Message.new(type: :unsubscribe,
+                args: [Message.new_id(), subscription])
   end
 
 end

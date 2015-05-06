@@ -70,7 +70,10 @@ defmodule Spell do
                cast_subscribe(peer, topic, options),
                call_subscribe(peer, topic),
                call_subscribe(peer, topic, options),
-               receive_event(peer, subscription)], to: Role.Subscriber
+               receive_event(peer, subscription),
+               cast_unsubscribe(peer, subscription),
+               call_unsubscribe(peer, subscription),
+               receive_unsubscribed(peer, unsubscribe)], to: Role.Subscriber
   defdelegate [cast_call(peer, procedure),
                cast_call(peer, procedure, options),
                receive_result(peer, call_id),
@@ -81,6 +84,9 @@ defmodule Spell do
                receive_registered(peer, register_id),
                call_register(peer, procedure),
                call_register(peer, procedure, options),
+               cast_unregister(peer, registration),
+               call_unregister(peer, registration),
+               receive_unregistered(peer, registration),
                cast_yield(peer, invocation),
                cast_yield(peer, invocation, options)], to: Role.Callee
 

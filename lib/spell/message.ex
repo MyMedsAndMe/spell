@@ -28,6 +28,7 @@ defmodule Spell.Message do
                 register:     64,
                 registered:   65,
                 unregister:   66,
+                unregistered: 67,
                 invocation:   68,
                 interrupt:    69,
                 yield:        70]

@@ -29,6 +29,8 @@ defmodule Spell.RPCTest do
     :ok = Spell.cast_yield(callee, invocation)
     assert_receive {Spell.Peer, ^caller,
                     %Message{type: :result, args: [^call_id, %{}]}}
+
+    :ok = Spell.call_unregister(callee, registration)
   end
 
 end

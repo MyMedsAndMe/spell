@@ -33,6 +33,8 @@ defmodule Spell.PubSubTest do
                      arguments_kw: ^arguments_kw}} =
         Spell.receive_event(subscriber, subscription)
     end
+
+    :ok = Spell.call_unsubscribe(subscriber, subscription)
   end
 
 end
