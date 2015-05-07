@@ -174,11 +174,13 @@ defmodule Crossbar do
   def handle_info({Spell.Transport.WebSocket, _pid,
                    {:terminating, {:remote, :closed}}}, _state) do
     # Remove the handler when receiving a remote closed message
+    # Logger.debug(fn -> "Crossbar out: #{inspect(message)}" end)
     :remove_handler
   end
 
   def handle_info({port, {:data, message}}, %{port: port} = state) do
     # Handle the stdout data coming in from the port
+    Logger.debug(fn -> "Crossbar.io stdout: #{inspect(message)}" end)
     {:ok, state}
   end
 
@@ -190,7 +192,7 @@ defmodule Crossbar do
   end
 
   def terminate(reason, state) do
-    Logger.warning(fn -> "Terminating due to: #{reason}" end)
+    Logger.debug(fn -> "Crossbar.io terminating due to: #{reason}" end)
     handle_event({:suite_finished, nil, nil}, state)
   end
 

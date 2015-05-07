@@ -51,6 +51,8 @@ defmodule Spell do
   """
   use Application
 
+  require Logger
+
   alias Spell.Peer
   alias Spell.Message
   alias Spell.Transport
@@ -120,6 +122,7 @@ defmodule Spell do
      in milliseconds between retries
 
   """
+  # TODO: there should be an asynchronous connect which doesn't await the WELCOME
   @spec connect(String.t, Keyword.t) :: {:ok, pid}
   def connect(uri, options \\ [])
       when is_binary(uri) and is_list(options) do
@@ -134,8 +137,7 @@ defmodule Spell do
               {:ok, _welcome}  -> {:ok, peer}
               {:error, reason} -> {:error, reason}
             end
-          {:error, reason} ->
-            {:error, reason}
+          {:error, reason} -> {:error, reason}
         end
     end
   end
