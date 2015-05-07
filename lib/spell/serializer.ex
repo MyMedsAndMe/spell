@@ -2,6 +2,9 @@ defmodule Spell.Serializer do
   @moduledoc """
   The `Spell.Serializer` behaviour specifies the contract for a WAMP
   serializer.
+
+  See the [protocol
+  documentation](https://github.com/tavendo/WAMP/blob/master/spec/basic.md#serializations).
   """
   use Behaviour
 

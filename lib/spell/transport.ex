@@ -1,6 +1,10 @@
 defprotocol Spell.Transport do
   @moduledoc """
-  A transport is a process.
+  A transport is the foundation for establishing bi-directional communication
+  between two peers.
+
+  See the [protocol
+  documentation](https://github.com/tavendo/WAMP/blob/master/spec/basic.md#transports).
   """
   use Behaviour
 
