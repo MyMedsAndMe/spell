@@ -20,9 +20,6 @@ defmodule Spell.Transport.WebSocket do
     | {:path, String.t}]
 
 
-  # Public Functions
-
-
   # Spell.Transport Callbacks
 
   @doc """

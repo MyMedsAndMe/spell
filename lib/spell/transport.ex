@@ -7,14 +7,12 @@ defprotocol Spell.Transport do
   @typep state :: any
 
   @doc """
-  Set the pid which the transport should send received messages to.
+  Connect the transport according to `serializer` and `options`.
 
-  Once connected, The transport must send all messages it receives to
-  the owner process. See `Spell.Transport.send/2`.
-
-  NB: This function is called by the owner process.
+  The `serializer` identifier must be passed in sibecause it is required to
+  establish the transport.
   """
-  defcallback connect(serializer :: module, options :: Keyword.t) ::
+  defcallback connect(serializer :: String.t, options :: Keyword.t) ::
     {:ok, state} | {:error, any}
 
   @doc """
