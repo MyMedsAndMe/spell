@@ -4,6 +4,8 @@ defmodule Spell.ConnectTest do
   alias Spell.Transport.WebSocket
 
   @serializer "json"
+  @bad_host   "192.168.100.100"
+  @bad_uri    "ws://" <> @bad_host
 
   setup do: {:ok, Crossbar.config}
 
@@ -21,4 +23,17 @@ defmodule Spell.ConnectTest do
     assert {:error, {404, _}} =
       WebSocket.connect(@serializer, host: host, port: port)
   end
+
+  test "connecting the websocket to a bad host" do
+    assert {:error, :timeout} =
+      WebSocket.connect(@serializer, host: @bad_host, port: 80)
+  end
+
+  test "connecting the peer to a bad host" do
+    {:error, :timeout} = Spell.connect(@bad_uri,
+                                       realm: Crossbar.realm,
+                                       retries: 1)
+  end
+
+
 end

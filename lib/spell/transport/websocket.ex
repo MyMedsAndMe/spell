@@ -72,7 +72,7 @@ defmodule Spell.Transport.WebSocket do
   end
 
   def websocket_terminate(reason, _conn_state, state) do
-    Logger.debug(fn -> "Connection terminating due to #{inspect(reason)}" end)
+    Logger.debug(fn -> "WebSocket connection terminating: #{inspect(reason)}" end)
     :ok = send_to_owner(state.owner, {:terminating, reason})
     {:ok, state}
   end

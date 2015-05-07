@@ -221,7 +221,20 @@ defmodule Spell.Peer do
         send(self(), {:role_hook, :on_open})
         {:noreply, put_in(state.transport[:pid], pid)}
       {:error, reason} ->
-        {:stop, {:transport, reason}, state}
+        Logger.debug(fn -> "Peer error on reconnect: #{inspect(reason)}" end)
+        case state.retries - 1 do
+          # TODO: store the retry timer to properly cancel it on
+          # the peer being shutdown, or a different reconnect message coming in
+          retries when retries > 0 ->
+            :erlang.send_after(state.retry_interval, self,
+                               {:transport, :reconnect})
+            {:noreply, %{state | retries: retries}}
+          retries when retries <= 0 ->
+            # The stop is `normal` in the sense that it wasn't caused by
+            # an internal error and the process shouldn't be restarted
+            send_to_owner(state, {:error, {:transport, reason}})
+            {:stop, :normal, state}
+        end
     end
   end
 
@@ -238,6 +251,8 @@ defmodule Spell.Peer do
                   %{transport: %{module: module, pid: pid}} = state) do
     case state.serializer.module.decode(raw_message) do
       {:ok, message} ->
+        Logger.debug(fn ->
+          "Peer #{inspect(pid)} received #{inspect(message)}" end)
         case Role.map_handle_message(state.role.state, message, state) do
           {:ok, role_state} ->
             {:noreply, put_in(state.role[:state], role_state)}
