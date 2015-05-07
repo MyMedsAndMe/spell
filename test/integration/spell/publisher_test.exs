@@ -7,7 +7,7 @@ defmodule Spell.PublisherTest do
   @topic "com.spell.test.topic"
 
   setup do
-    {:ok, peer} = Crossbar.get_uri(Crossbar.config)
+    {:ok, peer} = Crossbar.uri(Crossbar.config)
       |> Spell.connect(roles: [Publisher], realm: Crossbar.realm)
     on_exit fn -> Spell.close(peer) end
     {:ok, peer: peer}

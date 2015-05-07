@@ -6,7 +6,7 @@ defmodule Spell.CalleeTest do
   @procedure "com.spell.test.callee.procedure"
 
   setup do
-    {:ok, peer} = Crossbar.get_uri(Crossbar.config)
+    {:ok, peer} = Crossbar.uri(Crossbar.config)
       |> Spell.connect(roles: [Callee], realm: Crossbar.realm)
     on_exit fn -> Spell.close(peer) end
     {:ok, peer: peer}

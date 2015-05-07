@@ -1,7 +1,5 @@
 # Spell
 
-**Alpha Quality** though it's getting better quickly.
-
 Spell is an [Elixir](http://elixir-lang.org/) [WAMP](http://wamp.ws/) client
 implementing the
 [basic profile](https://github.com/tavendo/WAMP/blob/master/spec/basic.md)
@@ -41,7 +39,7 @@ Start an Elixir shell:
 $ iex -S mix
 ```
 
-<a href="#crossbar-install"></a>Start up Crossbar.io:
+<a name="crossbar-install"></a>Start up Crossbar.io:
 
 ```
 iex> Crossbar.start()
@@ -74,13 +72,13 @@ There are two functional groupings of roles:
 - PubSub
   - Publisher
   - Subscriber
-  - Broker _Server_
+  - Broker _[Server]_
 - RPC
   - Caller
   - Callee
-  - Dealer _Server_
+  - Dealer _[Server]_
 
-By default a client peer is started with all four client roles:
+By default a client peer is started with the above four client roles:
 
 ```elixir
 Spell.connect("ws://example.org", realm: "realm1")
@@ -96,13 +94,12 @@ to. As a result, if you call a synchronous function from a process which isn't
 the target peer's owner, the calling process will never receive the message, the
 command will timeout, and the owner process will receive an unexpected message.
 
+See the [open issue](https://github.com/MyMedsAndMe/spell/issues/10).
+
 ### PubSub
 
 Once subscribed to a topic, the subscriber will receive all messages
 published to that topic.
-
-(TODO: cut this?) Note: The examples are abbreviated; most functions can accept
-additonal keyword arguments.
 
 ```elixir
 # Events must be published to a topic.
@@ -239,7 +236,7 @@ See `Spell.Role` for descriptions of the Role callbacks.
 
 Look in `examples/` for the scripts.
 
-Some shortcuts to run the examples, entered from Spell's root:
+There are shortcuts to run the examples -- run the following from Spell's root:
 
 ```shell
 $ mix spell.example.pubsub

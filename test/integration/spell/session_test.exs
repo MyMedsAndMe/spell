@@ -5,7 +5,7 @@ defmodule Spell.SessionTest do
   alias Spell.Message
 
   setup do
-    {:ok, peer} = Crossbar.get_uri(Crossbar.config)
+    {:ok, peer} = Crossbar.uri(Crossbar.config)
       |> Spell.connect(realm: Crossbar.realm, features: %{publisher: %{}})
     {:ok, peer: peer}
   end

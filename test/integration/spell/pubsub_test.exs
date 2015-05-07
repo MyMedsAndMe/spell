@@ -4,12 +4,13 @@ defmodule Spell.PubSubTest do
   alias Spell.Role.Publisher
   alias Spell.Role.Subscriber
 
-  @topic "com.spell.test.pubsub.topic"
+  @topic   "com.spell.test.pubsub.topic"
 
   setup do
-    {:ok, publisher} = Crossbar.get_uri(Crossbar.config)
+    uri = Crossbar.uri(Crossbar.config)
+    {:ok, publisher} = uri
       |> Spell.connect(realm: Crossbar.realm, roles: [Publisher])
-    {:ok, subscriber} = Crossbar.get_uri(Crossbar.config)
+    {:ok, subscriber} = uri
       |> Spell.connect(realm: Crossbar.realm, roles: [Subscriber])
     on_exit fn ->
       for peer <- [publisher, subscriber], do: Spell.close(peer)
@@ -20,6 +21,8 @@ defmodule Spell.PubSubTest do
   @tag :integration
   test "pubsub end to end", %{publisher: publisher, subscriber: subscriber} do
     {:ok, subscription} = Spell.call_subscribe(subscriber, @topic)
+    assert {:ok, subscription} == Spell.call_subscribe(subscriber, @topic),
+      "the SUBSCRIBE message should be idempotent"
 
     for {arguments, arguments_kw} <- [{[%{}],    %{"a" => 1}},
                                       {[1, "a"], %{"a" => 1, "b" => 2}}] do
