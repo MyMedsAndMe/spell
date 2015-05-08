@@ -1,0 +1,16 @@
+language: elixir
+elixir:
+  - 1.0.4
+otp_release:
+  - 17.3
+sudo: true
+before_script:
+  - sudo pip install crossbar
+after_success:
+  - pkill -f crossbar
+notifications:
+  recipients:
+    - jtmoulia@gmail.com
+    - tanzi.marco@gmail.com
+    - volker.rabe@gmail.com
+    - danmarcab@gmail.com

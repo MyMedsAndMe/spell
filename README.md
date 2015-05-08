@@ -1,4 +1,5 @@
-# Spell
+# Spell [![Build Status](https://travis-ci.org/MyMedsAndMe/spell.svg?branch=master)](https://travis-ci.org/MyMedsAndMe/spell)
+
 
 Spell is an [Elixir](http://elixir-lang.org/) [WAMP](http://wamp.ws/) client
 implementing the
