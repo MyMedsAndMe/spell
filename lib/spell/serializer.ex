@@ -17,6 +17,11 @@ defmodule Spell.Serializer do
   defcallback name :: String.t
 
   @doc """
+  Returns the type of frame of the serializer. Allowed types (:text, :binary)
+  """
+  defcallback frame_type :: :text | :binary
+
+  @doc """
   Set the pid which the transport should send received messages to.
   """
   defcallback decode(String.t) :: Message.t

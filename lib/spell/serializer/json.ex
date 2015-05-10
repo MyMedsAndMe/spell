@@ -6,6 +6,8 @@ defmodule Spell.Serializer.JSON do
 
   def name, do: "json"
 
+  def frame_type, do: :text
+
   def decode(string) do
     case Poison.Parser.parse(string) do
       {:ok, [code | args]} ->
