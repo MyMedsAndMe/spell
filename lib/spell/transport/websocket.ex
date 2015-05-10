@@ -40,7 +40,7 @@ defmodule Spell.Transport.WebSocket do
         url = "ws://#{host}:#{port}#{path}"
         extra_headers = get_extra_headers(serializer)
         Logger.debug(fn -> "Connecting to #{url}..." end)
-        :websocket_client.start_link(url, __MODULE__, {self()},
+        :websocket_client.start_link(url, __MODULE__, {self(), serializer},
                                      extra_headers: extra_headers)
       {:error, reason} ->
         {:error, reason}
@@ -54,18 +54,19 @@ defmodule Spell.Transport.WebSocket do
 
   # :websocket_client Callbacks
 
-  def init({owner}, _conn_state) do
-    {:ok, %{owner: owner}}
+  def init({owner, serializer}, _conn_state) do
+    {:ok, %{owner: owner, serializer: serializer}}
   end
 
-  def websocket_handle({:text, raw_message}, _conn_state, state) do
+  def websocket_handle({frame_type, raw_message}, _conn_state, state)
+      when frame_type in [:text, :binary] do
     :ok = send_to_owner(state.owner, {:message, raw_message})
     {:ok, state}
   end
 
   def websocket_info({:send, raw_message}, _conn_state, state) do
-    Logger.debug(fn -> "Sending message over websocket: #{raw_message}" end)
-    {:reply, {:text, raw_message}, state}
+    Logger.debug(fn -> "Sending message over websocket: #{inspect(raw_message)}" end)
+    {:reply, {state.serializer.frame_type, raw_message}, state}
   end
 
   def websocket_terminate(reason, _conn_state, state) do
@@ -84,7 +85,7 @@ defmodule Spell.Transport.WebSocket do
 
   @spec get_extra_headers(String.t) :: [{String.t, String.t}]
   defp get_extra_headers(serializer) do
-    [{"Sec-WebSocket-Protocol", "wamp.2.#{serializer}"}]
+    [{"Sec-WebSocket-Protocol", "wamp.2.#{serializer.name}"}]
   end
 
   @spec get_all(Dict.t(key, value), [key], [value], [value]) ::
