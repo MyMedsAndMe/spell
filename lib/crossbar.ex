@@ -25,7 +25,9 @@ defmodule Crossbar do
   """
 
   use GenEvent
+
   require Logger
+  require EEx
 
   # Module Attributes
 
@@ -35,8 +37,9 @@ defmodule Crossbar do
   @crossbar_port 8080
 
   @crossbar_exec "/usr/local/bin/crossbar"
-  @crossbar_priv Application.app_dir(:spell, "priv/.crossbar")
-  @crossbar_args ["--cbdir", @crossbar_priv]
+  @crossbar_path Application.app_dir(:spell, ".crossbar")
+  @crossbar_args ["--cbdir", @crossbar_path]
+  @crossbar_template Application.app_dir(:spell, "priv/config.json.eex")
 
   # Structs
 
@@ -53,7 +56,7 @@ defmodule Crossbar do
   Add an event manager with the `Crossbar` handler to `Spell.Supervisor`.
   """
   @spec start(Keyword.t) :: {:ok, pid} | {:error, any}
-  def start(options \\ config()) do
+  def start(options \\ get_config()) do
     import Supervisor.Spec
     Supervisor.start_child(Spell.Supervisor,
                            worker(__MODULE__, [options],
@@ -78,7 +81,7 @@ defmodule Crossbar do
       GenEvent.stop(pid)
   """
   @spec start_link(Keyword.t) :: {:ok, pid} | {:error, any}
-  def start_link(options \\ config()) do
+  def start_link(options \\ get_config()) do
     {:ok, pid} = GenEvent.start_link(name: __MODULE__)
     :ok = GenEvent.add_handler(pid, __MODULE__, [options])
     {:ok, pid}
@@ -87,10 +90,16 @@ defmodule Crossbar do
 
   @doc """
   Return the port which the crossbar transport is listening on.
+
+  The default value of `8080` can be overrode using the environment
+  variable `CROSSBAR_PORT`.
   """
   @spec get_port(:websocket) :: :inet.port
   def get_port(:websocket) do
-    8080
+    case System.get_env("CROSSBAR_PORT") do
+      nil -> 8080
+      port when is_binary(port) -> String.to_integer(port)
+    end
   end
 
   @doc """
@@ -108,24 +117,49 @@ defmodule Crossbar do
   @doc """
   ExUnit setup helper function.
   """
-  def config(listener \\ :websocket) do
-    [host: get_host, port: get_port(listener), path: get_path(listener)]
+  def get_config(listener \\ :websocket) do
+    [host: get_host(),
+     port: get_port(listener),
+     path: get_path(listener),
+     realm: get_realm()]
   end
 
   @doc """
   Get the config as a uri.
   """
   @spec uri(Keyword.t) :: String.t
-  def uri(options \\ config()) do
+  def uri(options \\ get_config()) do
     "ws://#{options[:host]}:#{options[:port]}#{options[:path]}"
   end
 
   @doc """
   Get the default realm.
   """
-  @spec realm :: String.t
-  def realm do
+  @spec get_realm :: String.t
+  def get_realm do
     "realm1"
+  end
+
+  @doc """
+  Create the Crossbar.io config dir for `config`.
+
+  ## Options
+
+   * `:crossbar_path :: String.t` the path to the Crossbar.io config directory.
+
+  See `get_config/0` for other options.
+  """
+  def create_config(config \\ []) do
+    {path, config} = Dict.pop(config, :crossbar_path, @crossbar_path)
+    case File.mkdir_p(path) do
+      :ok ->
+        json_config = Dict.merge(get_config(), config)
+          |> template_config()
+        Path.join(path, "config.json")
+          |> File.write(json_config)
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   # GenEvent Callbacks
@@ -135,8 +169,9 @@ defmodule Crossbar do
   """
   @spec init(Keyword.t) :: {:ok, t} | {:error, term}
   def init(opts) do
+    :ok = create_config()
     executable = Dict.get(opts, :executable, @crossbar_exec)
-    arguments  = Dict.get(opts, :executable, @crossbar_args)
+    arguments  = Dict.get(opts, :arguments, @crossbar_args)
     Logger.debug("Starting crossbar: #{inspect([executable | arguments])}")
     port = Port.open({:spawn_executable, executable}, port_opts(arguments))
     # Wait for crossbar to start.
@@ -187,8 +222,11 @@ defmodule Crossbar do
 
   # Private Functions
 
+  # Template out a crossbar config file
+  EEx.function_from_file :defp, :template_config, @crossbar_template, [:assigns]
+
   @spec await(Keyword.t) :: :ok | {:error, :timeout | term}
-  defp await(config \\ config(:websocket), interval \\ 250, retries \\ 40)
+  defp await(config \\ get_config(:websocket), interval \\ 250, retries \\ 40)
   defp await(_config, _interval, 0), do: {:error, :timeout}
   defp await(config, interval, retries) do
     case Spell.Transport.WebSocket.connect("json", config) do

@@ -7,11 +7,11 @@ defmodule Spell.PubSubTest do
   @topic   "com.spell.test.pubsub.topic"
 
   setup do
-    uri = Crossbar.uri(Crossbar.config)
+    uri = Crossbar.uri(Crossbar.get_config())
     {:ok, publisher} = uri
-      |> Spell.connect(realm: Crossbar.realm, roles: [Publisher])
+      |> Spell.connect(realm: Crossbar.get_realm(), roles: [Publisher])
     {:ok, subscriber} = uri
-      |> Spell.connect(realm: Crossbar.realm, roles: [Subscriber])
+      |> Spell.connect(realm: Crossbar.get_realm(), roles: [Subscriber])
     on_exit fn ->
       for peer <- [publisher, subscriber], do: Spell.close(peer)
     end

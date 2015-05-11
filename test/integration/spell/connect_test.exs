@@ -7,7 +7,7 @@ defmodule Spell.ConnectTest do
   @bad_host   "192.168.100.100"
   @bad_uri    "ws://" <> @bad_host
 
-  setup do: {:ok, Crossbar.config}
+  setup do: {:ok, Crossbar.get_config()}
 
   test "connecting the websocket", %{host: host, port: port} do
     assert {:error, {:missing, keys}} =
@@ -33,7 +33,7 @@ defmodule Spell.ConnectTest do
 
   test "connecting the peer to a bad host" do
     {:error, reason} = Spell.connect(@bad_uri,
-                                     realm: Crossbar.realm,
+                                     realm: Crossbar.get_realm(),
                                      retries: 1)
     assert reason in [:timeout, :enetunreach],
       "the reason is timeout if the network is available, enetunreach if not"

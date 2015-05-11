@@ -7,7 +7,7 @@
             "type": "router",
             "realms": [
                 {
-                    "name": "realm1",
+                    "name": "<%= @realm %>",
                     "roles": [
                         {
                             "name": "anonymous",
@@ -29,14 +29,14 @@
                     "type": "web",
                     "endpoint": {
                         "type": "tcp",
-                        "port": 8080
+                        "port": <%= @port %>
                     },
                     "paths": {
                         "/": {
                             "type": "static",
                             "directory": ".."
                         },
-                        "ws": {
+                        "<%= String.replace(@path, ~r"^/", "") %>": {
                             "type": "websocket"
                         }
                     }

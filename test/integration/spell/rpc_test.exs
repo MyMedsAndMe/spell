@@ -8,11 +8,11 @@ defmodule Spell.RPCTest do
   @procedure "com.spell.test.rpc.topic"
 
   setup do
-    uri = Crossbar.uri(Crossbar.config)
+    uri = Crossbar.uri(Crossbar.get_config())
     {:ok, caller} = uri
-      |> Spell.connect(realm: Crossbar.realm, roles: [Caller])
+      |> Spell.connect(realm: Crossbar.get_realm(), roles: [Caller])
     {:ok, callee} = uri
-      |> Spell.connect(realm: Crossbar.realm, roles: [Callee])
+      |> Spell.connect(realm: Crossbar.get_realm(), roles: [Callee])
     on_exit fn ->
       for peer <- [caller, callee], do: Spell.close(peer)
     end

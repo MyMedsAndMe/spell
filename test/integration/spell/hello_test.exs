@@ -5,8 +5,9 @@ defmodule Spell.HelloTest do
   alias Spell.Message
 
   setup do
-    {:ok, peer} = Crossbar.uri(Crossbar.config)
-      |> Spell.connect(realm: Crossbar.realm, features: %{publisher: %{}})
+    {:ok, peer} = Crossbar.uri(Crossbar.get_config())
+      |> Spell.connect(realm: Crossbar.get_realm(),
+                       features: %{publisher: %{}})
     on_exit fn -> Spell.close(peer) end
     {:ok, peer: peer}
   end

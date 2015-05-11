@@ -108,7 +108,7 @@ topic = "com.spell.example.pubsub.topic"
 
 # Create a peer with the subscriber role.
 subscriber = Spell.connect(Crossbar.uri,
-                           realm: Crossbar.realm,
+                           realm: Crossbar.get_realm(),
                            roles: [Spell.Role.Subscriber])
 
 # `call_subscribe/2,3` synchronously subscribes to the topic.
@@ -116,7 +116,7 @@ subscriber = Spell.connect(Crossbar.uri,
 
 # Create a peer with the publisher role.
 publisher = Spell.connect(Crossbar.uri,
-                          realm: Crossbar.realm,
+                          realm: Crossbar.get_realm(),
                           roles: [Spell.Role.Publisher])
 
 # `call_publish/2,3` synchronously publishes a message to the topic.
@@ -146,7 +146,7 @@ procedure = "com.spell.example.rpc.procedure"
 
 # Create a peer with the callee role.
 caller = Spell.connect(Crossbar.uri,
-                       realm: Crossbar.realm,
+                       realm: Crossbar.get_realm(),
                        roles: [Spell.Role.Callee])
 
 # `call_register/2,3` synchronously calls the procedure with the arguments.
@@ -174,7 +174,7 @@ procedure = "com.spell.example.rpc.procedure"
 
 # Create a peer with the callee role.
 callee = Spell.connect(Crossbar.uri,
-                       realm: Crossbar.realm,
+                       realm: Crossbar.get_realm(),
                        roles: [Spell.Role.Callee])
 
 # `call_register/2,3` synchronously registers the procedure.
@@ -182,7 +182,7 @@ callee = Spell.connect(Crossbar.uri,
 
 # Create a peer with the caller role.
 caller = Spell.connect(Crossbar.uri,
-                       realm: Crossbar.realm,
+                       realm: Crossbar.get_realm(),
                        roles: [Spell.Role.Caller])
 
 # `cast_call/2,3` asynchronously calls the procedure.
@@ -228,7 +228,7 @@ defmodule Broker do
   ... shamelessly skipping the real work.
 end
 
-Spell.Peer.connect(Crossbar.uri, realm: Crossbar.realm, roles: [Broker])
+Spell.Peer.connect(Crossbar.uri, realm: Crossbar.get_realm(), roles: [Broker])
 ```
 
 See `Spell.Role` for descriptions of the Role callbacks.
@@ -255,6 +255,13 @@ To run the tests:
 $ mix test              # all tests
 $ mix test.integration  # only integration tests
 $ mix test.unit         # only unit tests
+```
+
+The Crossbar.io test server can be configured to listen on a different port
+by running:
+
+```shell
+$ CROSSBAR_PORT=8000 mix ...
 ```
 
 ## Creating the Documentation
