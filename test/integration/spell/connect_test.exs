@@ -25,14 +25,18 @@ defmodule Spell.ConnectTest do
   end
 
   test "connecting the websocket to a bad host" do
-    assert {:error, :timeout} =
+    assert {:error, reason} =
       WebSocket.connect(@serializer, host: @bad_host, port: 80)
+    assert reason in [:timeout, :enetunreach],
+      "the reason is timeout if the network is available, enetunreach if not"
   end
 
   test "connecting the peer to a bad host" do
-    {:error, :timeout} = Spell.connect(@bad_uri,
-                                       realm: Crossbar.realm,
-                                       retries: 1)
+    {:error, reason} = Spell.connect(@bad_uri,
+                                     realm: Crossbar.realm,
+                                     retries: 1)
+    assert reason in [:timeout, :enetunreach],
+      "the reason is timeout if the network is available, enetunreach if not"
   end
 
 

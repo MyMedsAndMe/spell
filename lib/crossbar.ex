@@ -51,13 +51,8 @@ defmodule Crossbar do
 
   @doc """
   Add an event manager with the `Crossbar` handler to `Spell.Supervisor`.
-
-  Crossbar can then be stopped and restarted with:
-
-      Supervisor.terminate_child(Spell.Supervisor, Crossbar)
-      Supervisor.restart_child(Spell.Supervisor, Crossbar)
   """
-  @spec start :: {:ok, pid} | {:error, any}
+  @spec start(Keyword.t) :: {:ok, pid} | {:error, any}
   def start(options \\ config()) do
     import Supervisor.Spec
     Supervisor.start_child(Spell.Supervisor,
@@ -67,19 +62,36 @@ defmodule Crossbar do
   end
 
   @doc """
-  Start an event manager with the `Crossbar` handler.
+  Stop the Crossbar.io server. This can only be used with `start/1`.
   """
+  @spec stop() :: :ok | {:error, any}
+  def stop() do
+    GenEvent.stop(Crossbar)
+    Supervisor.delete_child(Spell.Supervisor, Crossbar)
+  end
+
+  @doc """
+  Start an event manager with the `Crossbar` handler.
+
+  Stop the process with:
+
+      GenEvent.stop(pid)
+  """
+  @spec start_link(Keyword.t) :: {:ok, pid} | {:error, any}
   def start_link(options \\ config()) do
     {:ok, pid} = GenEvent.start_link(name: __MODULE__)
-    GenEvent.add_handler(pid, __MODULE__, [options])
+    :ok = GenEvent.add_handler(pid, __MODULE__, [options])
     {:ok, pid}
   end
+
 
   @doc """
   Return the port which the crossbar transport is listening on.
   """
   @spec get_port(:websocket) :: :inet.port
-  def get_port(:websocket), do: 8080
+  def get_port(:websocket) do
+    8080
+  end
 
   @doc """
   Return the crossbar host.
@@ -114,22 +126,6 @@ defmodule Crossbar do
   @spec realm :: String.t
   def realm do
     "realm1"
-  end
-
-  @doc """
-  Stop the Crossbar.io server.
-
-  This is a synchronous call.
-  """
-  @spec stop(pid) :: :ok | {:error, :timeout}
-  def stop(pid) do
-    monitor_ref = Process.monitor(pid)
-    Process.exit(pid, :normal)
-    receive do
-      {:DOWN, ^monitor_ref, _type, ^pid, _info} -> :ok
-    after
-      @timeout -> {:error, :timeout}
-    end
   end
 
   # GenEvent Callbacks
@@ -184,13 +180,6 @@ defmodule Crossbar do
     {:ok, state}
   end
 
-  def handle_info({:EXIT, pid, :normal}, state) do
-    Logger.debug(fn ->
-      "Crossbar received exit: #{inspect(pid)}, state: #{inspect(state)}"
-    end)
-    {:ok, state}
-  end
-
   def terminate(reason, state) do
     Logger.debug(fn -> "Crossbar.io terminating due to: #{reason}" end)
     handle_event({:suite_finished, nil, nil}, state)
@@ -204,14 +193,14 @@ defmodule Crossbar do
   defp await(config, interval, retries) do
     case Spell.Transport.WebSocket.connect("json", config) do
       {:error, :econnrefused} ->
-        # Flush the error message of the linked websocked pid crashing
+        # Flush the error message of the linked websocket crashing
         receive do
-          {:EXIT, pid, :normal} when is_pid(pid) ->
-            :timer.sleep(interval)
-            await(config, interval, retries - 1)
+          {:EXIT, pid, :normal} when is_pid(pid) -> :ok
         after
-          100 -> {:error, :error_timeout}
+          0 -> :ok
         end
+        :timer.sleep(interval)
+        await(config, interval, retries - 1)
       {:ok, _pid}      -> :ok
       {:error, reason} -> {:error, reason}
     end

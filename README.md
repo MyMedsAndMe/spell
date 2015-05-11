@@ -42,15 +42,14 @@ $ iex -S mix
 
 <a name="crossbar-install"></a>Start up Crossbar.io:
 
-```
+```elixir
 iex> Crossbar.start()
 ```
 
-There's a bug in the Crossbar termination. You'll have to close the Crossbar.io
-server from the shell. Something like:
+To stop Crossbar.io from IEx:
 
-```
-$ pkill -f crossbar  # a bit dangerous
+```elixir
+iex> Crossbar.stop()
 ```
 
 You can find more detailed documentation at any time by checking
@@ -60,7 +59,8 @@ the source code documentation. `Spell` provides an entry point:
 iex> h Spell
 ```
 
-You can hit <kbd>C-c C-c</kbd> to exit the shell and shutdown Crossbar.
+You can hit <kbd>C-c C-c</kbd> to exit the shell. Be sure to stop Crossbar.io
+first.
 
 ### Peers
 
