@@ -117,7 +117,7 @@ defmodule Spell.Peer do
   """
   @spec call(pid, module, any) :: :ok
   def call(peer, role, message) do
-    GenServer.cast(peer, {:call_role, {role, message}})
+    GenServer.call(peer, {:call_role, {role, message}})
   end
 
   @doc """
@@ -143,10 +143,18 @@ defmodule Spell.Peer do
 
   @doc """
   Send an Erlang message to the peer's owner.
+
+  TODO: Rename to `notify`
   """
   @spec send_to_owner(pid, any) :: :ok
   def send_to_owner(peer, term) do
     send(peer.owner, {__MODULE__, self(), term})
+    :ok
+  end
+
+  @spec notify(pid, any) :: :ok
+  def notify(pid, term) do
+    send(pid, {__MODULE__, self(), term})
     :ok
   end
 

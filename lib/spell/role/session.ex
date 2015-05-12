@@ -16,7 +16,13 @@ defmodule Spell.Role.Session do
 
   # Module Attributes
 
-  defstruct [:realm, :roles, session: nil, details: nil]
+  defstruct [
+    :realm,
+    :roles,
+    session: nil,
+    details: nil,
+    pid_hello: nil,
+    pid_goodbye: nil]
 
   @goodbye_close_realm "wamp.error.close_realm"
   @goodbye_and_out     "wamp.error.goodbye_and_out"
@@ -32,7 +38,8 @@ defmodule Spell.Role.Session do
     reason = Keyword.get(options, :reason, @goodbye_close_realm)
     details = Keyword.get(options, :details, %{message: "goodbye"})
     {:ok, message} = new_goodbye(reason, details)
-    Peer.send_message(peer, message)
+    {:ok, ^message} = Peer.call(peer, __MODULE__, {:send, message})
+    :ok
   end
 
   @doc """
@@ -75,30 +82,26 @@ defmodule Spell.Role.Session do
   def on_open(peer, %{realm: realm} = state) when realm != nil do
     {:ok, hello} = new_hello(state.realm, %{roles: state.roles})
     case Peer.send_message(peer, hello) do
-      :ok              -> {:ok, state}
-      {:error, reason} -> {:error, reason}
+      :ok ->
+        {:ok, %{state | pid_hello: peer.owner}}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   @doc """
   Handle WELCOME, GOODBYE, and ABORT messages.
-
-  ## Behaviour
-
-   * WELCOME: set the peer session
-   * GOODBYE: close the connection normally
-   * ABORT: close the connection with an error. With the default supervision
-     settings, the peer will be restarted.
   """
   def handle_message(%Message{type: :welcome,
                               args: [session, details]} = welcome,
-                     peer, state) do
-    :ok = Peer.send_to_owner(peer, welcome)
-    {:ok, %{state | session: session, details: details}}
+                     _peer, %{pid_hello: pid_hello} = state) when is_pid(pid_hello) do
+    :ok = Peer.notify(pid_hello, welcome)
+    {:ok, %{state | session: session, details: details, pid_hello: nil}}
   end
 
-  def handle_message(%Message{type: :goodbye} = goodbye, peer, state) do
-    :ok = Peer.send_to_owner(peer, goodbye)
+  def handle_message(%Message{type: :goodbye} = goodbye, _peer,
+                     %{pid_goodbye: pid_goodbye} = state) do
+    :ok = Peer.notify(pid_goodbye, goodbye)
     {:close, goodbye, state}
   end
 
@@ -109,6 +112,15 @@ defmodule Spell.Role.Session do
 
   def handle_message(message, peer, state) do
     super(message, peer, state)
+  end
+
+  @doc """
+  The `handle_call` function is used to send `GOODBYE` messages.
+  """
+  def handle_call({:send, %Message{type: :goodbye} = message},
+                  {pid_goodbye, _}, peer, %{pid_goodbye: nil} = state) do
+    :ok = Peer.send_message(peer, message)
+    {:ok, {:ok, message}, %{state | pid_goodbye: pid_goodbye}}
   end
 
   # Private Functions
