@@ -152,6 +152,9 @@ defmodule Spell.Message do
   """
   @spec new_id :: integer
   def new_id do
+    # TODO: hack to ensure the random generator is seeded -- will result in
+    # clock skew
+    :random.seed(:erlang.now())
     (:math.pow(2, 53) |> round |> :random.uniform) - 1
   end
 

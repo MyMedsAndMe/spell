@@ -215,6 +215,11 @@ defmodule Crossbar do
     {:ok, state}
   end
 
+  def handle_info({:EXIT, _pid, :normal}, state) do
+    # Swallow the notification of a websocket connection dying
+    {:ok, state}
+  end
+
   def terminate(reason, state) do
     Logger.debug(fn -> "Crossbar.io terminating due to: #{reason}" end)
     handle_event({:suite_finished, nil, nil}, state)

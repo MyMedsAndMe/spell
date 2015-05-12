@@ -21,7 +21,7 @@ defmodule Spell.SubscriberTest do
   end
 
   @tag :integration
-  test "cast_subscribe/2 multiple processes", %{peer: peer} do
+  test "multiple processes", %{peer: peer} do
     tasks = for topic <- [@topic, @topic, @topic] do
       Task.async(fn ->
         {:ok, subscription} = Subscriber.call_subscribe(peer, topic)
