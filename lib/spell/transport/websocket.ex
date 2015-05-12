@@ -32,15 +32,17 @@ defmodule Spell.Transport.WebSocket do
    * `:path` defaults to "", HTTP resource path. It must be
      prefixed with a `/`.
   """
-  @spec connect(String.t, options) :: {:ok, pid} | {:error, any}
+  @spec connect(module, options) :: {:ok, pid} | {:error, any}
   def connect(serializer, options) when is_list(options) do
     case get_all(options, @options_spec) do
       {:ok, [host, port, path]}
           when is_binary(host) and is_integer(port) and is_binary(path) ->
         url = "ws://#{host}:#{port}#{path}"
-        extra_headers = get_extra_headers(serializer)
+        serializer_info = serializer.transport_info(__MODULE__)
+        extra_headers = get_extra_headers(serializer_info)
+
         Logger.debug(fn -> "Connecting to #{url}..." end)
-        :websocket_client.start_link(url, __MODULE__, {self(), serializer},
+        :websocket_client.start_link(url, __MODULE__, {self(), serializer_info},
                                      extra_headers: extra_headers)
       {:error, reason} ->
         {:error, reason}
@@ -54,8 +56,8 @@ defmodule Spell.Transport.WebSocket do
 
   # :websocket_client Callbacks
 
-  def init({owner, serializer}, _conn_state) do
-    {:ok, %{owner: owner, serializer: serializer}}
+  def init({owner, serializer_info}, _conn_state) do
+    {:ok, %{owner: owner, serializer_info: serializer_info}}
   end
 
   def websocket_handle({frame_type, raw_message}, _conn_state, state)
@@ -66,7 +68,7 @@ defmodule Spell.Transport.WebSocket do
 
   def websocket_info({:send, raw_message}, _conn_state, state) do
     Logger.debug(fn -> "Sending message over websocket: #{inspect(raw_message)}" end)
-    {:reply, {state.serializer.frame_type, raw_message}, state}
+    {:reply, {state.serializer_info.frame_type, raw_message}, state}
   end
 
   def websocket_terminate(reason, _conn_state, state) do
@@ -83,9 +85,9 @@ defmodule Spell.Transport.WebSocket do
     :ok
   end
 
-  @spec get_extra_headers(String.t) :: [{String.t, String.t}]
-  defp get_extra_headers(serializer) do
-    [{"Sec-WebSocket-Protocol", "wamp.2.#{serializer.name}"}]
+  @spec get_extra_headers(map) :: [{String.t, String.t}]
+  defp get_extra_headers(%{name: name}) do
+    [{"Sec-WebSocket-Protocol", "wamp.2.#{name}"}]
   end
 
   @spec get_all(Dict.t(key, value), [key], [value], [value]) ::

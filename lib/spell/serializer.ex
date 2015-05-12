@@ -8,26 +8,21 @@ defmodule Spell.Serializer do
   alias Spell.Message
 
   @doc """
-  Returns the name of the serializer. This is used to construct the
-  sub-protocol name:
+  Returns the transport specific data of the serializer. This is used among
+  other things to construct the sub-protocol name:
 
       $transport.2.$serializer
 
   """
-  defcallback name :: String.t
+  defcallback transport_info(module :: atom) :: map
 
   @doc """
-  Returns the type of frame of the serializer. Allowed types (:text, :binary)
-  """
-  defcallback frame_type :: :text | :binary
-
-  @doc """
-  Set the pid which the transport should send received messages to.
+  Decodes a binary string encoded message
   """
   defcallback decode(String.t) :: Message.t
 
   @doc """
-  Send a message over the transport.
+  Encodes a message into a binary string
   """
   defcallback encode(Message.t) :: String.t
 

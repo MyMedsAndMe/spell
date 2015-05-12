@@ -4,9 +4,9 @@ defmodule Spell.Serializer.MessagePack do
 
   # Serializer Callbacks
 
-  def name, do: "msgpack"
-
-  def frame_type, do: :binary
+  def transport_info(Spell.Transport.WebSocket) do
+    %{name: "msgpack", frame_type: :binary}
+  end
 
   def decode(string) do
     case Msgpax.unpack(string) do

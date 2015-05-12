@@ -12,7 +12,7 @@ defprotocol Spell.Transport do
   The `serializer` identifier must be passed in sibecause it is required to
   establish the transport.
   """
-  defcallback connect(serializer :: String.t, options :: Keyword.t) ::
+  defcallback connect(serializer :: module, options :: Keyword.t) ::
     {:ok, state} | {:error, any}
 
   @doc """
