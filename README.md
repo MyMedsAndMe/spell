@@ -25,6 +25,14 @@ the core library:
 
 Be sure to understand [peer owners](#peer-owner) before using.
 
+## Getting Help
+
+Spell uses GitHub [issues](https://github.com/MyMedsAndMe/spell/issues) and
+[pull requests](https://github.com/MyMedsAndMe/spell/pulls) for development.
+
+Spell has a mailing list at spell@librelist.com; general questions or ideas are
+welcome there. See [librelist](http://librelist.com/) for how to sign up.
+
 ## How it Works
 
 You can run the examples you're about to run into, though first you'll need
