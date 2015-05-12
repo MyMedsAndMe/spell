@@ -16,7 +16,7 @@ defmodule Spell.Role do
    * `on_open/2`
    * `on_close/2`
    * `handle_message/3`
-   * `handle_cast/3`
+   * `handle_call/4`
 
   """
   use Behaviour
@@ -46,14 +46,16 @@ defmodule Spell.Role do
 
       def handle_message(_, _, state), do: {:ok, state}
 
-      def handle_cast(_, _, state),    do: {:ok, state}
+      def handle_call(_message, _from, _peer, state) do
+        {:ok, :ok, state}
+      end
 
       defoverridable [get_features: 1,
                       init: 2,
                       on_open: 2,
                       on_close: 2,
                       handle_message: 3,
-                      handle_cast: 3]
+                      handle_call: 4]
     end
 
   end
@@ -95,12 +97,16 @@ defmodule Spell.Role do
     {:ok, any} | {:error, any}
 
   @doc """
-  Handle a cast sent to the peer.
+  Handle a call from the peer.
 
-  XXX: this might be deprecated
+  ## Return values
+
+   * `{:ok, reply, new_state}`: return `reply`
+   * `{:error, reason}`
   """
-  defcallback handle_cast(message :: any, peer :: Peer.t, state :: any) ::
-    {:ok, any} | {:error, any}
+  defcallback handle_call(message :: any, from :: pid,
+                          peer :: Peer.t, state :: any) ::
+    {:ok, any, any} | {:error, any}
 
   # Public Functions
 
@@ -182,18 +188,17 @@ defmodule Spell.Role do
   end
 
   @doc """
-  Call the role's `handle_cast` function with the message and its state.
-
-  TODO: error handling for the `handle_cast/2` call?
+  From `roles` call the `role`'s `send_message` function with the `message`
+  and the role's state.
   """
-  @spec cast([{module, any}], module, Peer.t, any) ::
+  @spec call([{module, any}], module, any, pid, Peer.t) ::
     {:ok, [{module, any}]} | {:error, :no_role}
-  def cast(roles, role, peer, message) do
+  def call(roles, role, message, from, peer) do
     case Keyword.fetch(roles, role) do
       {:ok, role_state} ->
-        case role.handle_cast(message, peer, role_state) do
-          {:ok, role_state} ->
-            {:ok, Keyword.put(roles, role, role_state)}
+        case role.handle_call(message, from, peer, role_state) do
+          {:ok, reply, role_state} ->
+            {:ok, reply, Keyword.put(roles, role, role_state)}
           {:error, reason} ->
             {:error, reason}
         end

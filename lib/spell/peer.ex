@@ -113,11 +113,11 @@ defmodule Spell.Peer do
   # Public Role Interface
 
   @doc """
-  Cast a message to a specific role.
+  Synchronously send a message to the role.
   """
-  @spec cast_role(pid, module, any) :: :ok
-  def cast_role(peer, role, message) do
-    GenServer.cast(peer, {:cast_role, {role, message}})
+  @spec call(pid, module, any) :: :ok
+  def call(peer, role, message) do
+    GenServer.cast(peer, {:call_role, {role, message}})
   end
 
   @doc """
@@ -179,19 +179,19 @@ defmodule Spell.Peer do
     end
   end
 
+  def handle_call({:call_role, {role, message}}, from, state) do
+    case Role.call(state.role.state, role, message, from, state) do
+      {:ok, reply, role_state} ->
+        {:reply, reply, put_in(state.role[:state], role_state)}
+      {:error, reason} ->
+        {:stop, {:cast_role, reason}, state}
+    end
+  end
+
   def handle_cast({:send_message, %Message{} = message}, state) do
     case send_message(state, message) do
       :ok              -> {:noreply, state}
       {:error, reason} -> {:stop, {:send_message, reason}, state}
-    end
-  end
-
-  def handle_cast({:cast_role, {role, message}}, state) do
-    case Role.cast(state.role.state, role, state, message) do
-      {:ok, role_state} ->
-        {:noreply, put_in(state.role[:state], role_state)}
-      {:error, reason} ->
-        {:stop, {:cast_role, reason}, state}
     end
   end
 
