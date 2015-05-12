@@ -7,11 +7,14 @@ defmodule Spell.Mixfile do
      name: "Spell",
      source_url: "https://github.com/MyMedsAndMe/spell",
      elixir: "~> 1.0",
+     description: description,
+     package: package,
      deps: deps,
      aliases: aliases,
      docs: docs,
      preferred_cli_env: ["test.unit": :test,
                          "test.integration": :test,
+                         "hex.docs": :doc,
                          docs: :doc]
     ]
   end
@@ -21,6 +24,23 @@ defmodule Spell.Mixfile do
                     :websocket_client,
                     :poison],
     mod: {Spell, []}]
+  end
+
+  defp description do
+    """
+    Spell is an extensible Elixir WAMP client. Spell supports the client
+    subscriber, publisher, callee, and caller roles.
+    """
+  end
+
+  defp package do
+    [files: ["lib", "priv", "mix.exs", "README.md", "LICENSE"],
+     contributors: ["Daniel Marín",
+                    "Thomas Moulia",
+                    "Volker Rabe",
+                    "Marco Tanzi"],
+     licenses: ["Apache 2.0"],
+     links: %{"Github" => "https://github.com/MyMedsAndMe/spell"}]
   end
 
   # TODO: allow transport/serialization deps to be filtered out
