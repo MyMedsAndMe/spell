@@ -222,8 +222,7 @@ defmodule Spell.Peer do
                   %{transport: %{pid: nil} = transport,
                     serializer: serializer} = state) do
     # WARNING: role states aren't reset. TBD if this is a good thing
-    case transport.module.connect(serializer.module.name(),
-                                  transport.options) do
+    case transport.module.connect(serializer.module, transport.options) do
       {:ok, pid} ->
         Logger.debug(fn -> "Connected using #{inspect(state)}" end)
         send(self(), {:role_hook, :on_open})

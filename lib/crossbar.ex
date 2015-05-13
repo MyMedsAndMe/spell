@@ -234,7 +234,7 @@ defmodule Crossbar do
   defp await(config \\ get_config(:websocket), interval \\ 250, retries \\ 40)
   defp await(_config, _interval, 0), do: {:error, :timeout}
   defp await(config, interval, retries) do
-    case Spell.Transport.WebSocket.connect("json", config) do
+    case Spell.Transport.WebSocket.connect(Spell.Serializer.JSON, config) do
       {:error, :econnrefused} ->
         # Flush the error message of the linked websocket crashing
         receive do

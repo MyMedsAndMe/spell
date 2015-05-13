@@ -50,6 +50,8 @@ defmodule Spell.Mixfile do
      {:websocket_client, github: "jeremyong/websocket_client", tag: "v0.7"},
      # Req'd by: `Spell.Serializer.JSON`
      {:poison, "~> 1.4.0"},
+     # Req'd by: `Spell.Serializer.MessagePack`
+     {:msgpax, "~> 0.7"},
      # Doc deps
      {:earmark, "~> 0.1", only: :doc},
      {:ex_doc, "~> 0.7", only: :doc}
