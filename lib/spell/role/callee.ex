@@ -7,6 +7,10 @@ defmodule Spell.Role.Callee do
   alias Spell.Message
   alias Spell.Peer
 
+  defstruct [register_requests:   HashDict.new(),
+             unregister_requests: HashDict.new(),
+             registrations:       HashDict.new()]
+
   # Public Functions
 
   @doc """
@@ -19,7 +23,7 @@ defmodule Spell.Role.Callee do
   def cast_register(peer, procedure, options \\ []) do
     {:ok, %{args: [register_id | _]} = register} =
       new_register_message(procedure, options)
-    :ok = Peer.send_message(peer, register)
+    :ok = Peer.call(peer, __MODULE__, {:send, register})
     {:ok, register_id}
   end
 
@@ -42,8 +46,10 @@ defmodule Spell.Role.Callee do
   def cast_unregister(peer, registration) do
     {:ok, %{args: [unregister_id | _]} = message} =
       new_unregister_message(registration)
-    :ok = Peer.send_message(peer, message)
-    {:ok, unregister_id}
+    case Peer.call(peer, __MODULE__, {:send, message}) do
+      :ok              -> {:ok, unregister_id}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @doc """
@@ -51,8 +57,12 @@ defmodule Spell.Role.Callee do
   receive a matching UNREGISTERED response from the server.
   """
   def call_unregister(peer, registration) do
-    {:ok, unregister_id} = cast_unregister(peer, registration)
-    receive_unregistered(peer, unregister_id)
+    case cast_unregister(peer, registration) do
+      {:ok, unregister_id} ->
+        receive_unregistered(peer, unregister_id)
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """
@@ -60,6 +70,8 @@ defmodule Spell.Role.Callee do
   """
   def cast_yield(peer, invocation, options \\ []) do
     {:ok, yield} = new_yield_message(invocation, options)
+    # TODO: use `Peer.call` to validate this fn caller's pid against
+    # the invocation requests
     Peer.send_message(peer, yield)
   end
 
@@ -108,14 +120,85 @@ defmodule Spell.Role.Callee do
 
   def get_features(_options), do: {:callee, %{}}
 
-  def handle_message(%Message{type: type} = message, peer, state)
-      when type == :registered or type == :unregistered or type == :invocation do
-    :ok = Peer.send_to_owner(peer, message)
-    {:ok, state}
+  def init(_peer, []) do
+    {:ok, %__MODULE__{}}
+  end
+
+  @doc """
+  Handle `REGISTERED`, `UNREGISTERED`, and `INVOCATION` messages.
+  """
+  def handle_message(%Message{type: :registered,
+                              args: [request, registration]} = message,
+                     _peer, state) do
+    case Dict.pop(state.register_requests, request) do
+      {nil, _} ->
+        {:error, {:register, :no_request}}
+      {pid, register_requests} ->
+        :ok = Peer.notify(pid, message)
+        registrations = Dict.put_new(state.registrations, registration, pid)
+        {:ok, %{state |
+                register_requests: register_requests,
+                registrations: registrations}}
+    end
+  end
+
+  def handle_message(%Message{type: :unregistered,
+                              args: [request]} = message,
+                     _peer, state) do
+    case Dict.pop(state.unregister_requests, request) do
+      {nil, _} ->
+        {:error, {:unregister, :no_request}}
+      {{registration, pid}, unregister_requests} ->
+        :ok = Peer.notify(pid, message)
+        registrations = Dict.delete(state.registrations, registration)
+        {:ok, %{state |
+                unregister_requests: unregister_requests,
+                registrations: registrations}}
+    end
+  end
+
+  def handle_message(%Message{type: :invocation,
+                              args: [_, registration | _]} = message,
+                     _peer, state) do
+    case Dict.get(state.registrations, registration) do
+      nil ->
+        {:error, :no_registration}
+      pid ->
+        :ok = Peer.notify(pid, message)
+        {:ok, state}
+    end
   end
 
   def handle_message(message, peer, state) do
     super(message, peer, state)
+  end
+
+  @doc """
+  The `handle_call` callback is used to send `REGISTER` and `UNREGISTER`
+  messages.
+  """
+  def handle_call({:send, %Message{type: :register,
+                                   args: [request | _]} = message},
+                  {pid, _}, peer, state) do
+    :ok = Peer.send_message(peer, message)
+    register_requests = Dict.put_new(state.register_requests, request, pid)
+    {:ok, :ok, %{state | register_requests: register_requests}}
+  end
+
+  def handle_call({:send, %Message{type: :unregister,
+                                   args: [request, registration]} = message},
+                  {pid, _}, peer, state) do
+    case Dict.get(state.registrations, registration) do
+      nil ->
+        {:ok, {:error, :no_registration}, state}
+      ^pid ->
+        :ok = Peer.send_message(peer, message)
+        unregister_requests = Dict.put_new(state.unregister_requests, request,
+                                            {registration, pid})
+        {:ok, :ok, %{state | unregister_requests: unregister_requests}}
+      other_pid when is_pid(other_pid) ->
+        {:ok, {:error, :not_owner}, state}
+    end
   end
 
   # Private Functions
