@@ -133,6 +133,16 @@ defmodule Crossbar do
   end
 
   @doc """
+  Hack to get the auth uri.
+
+  TODO: support this as part of templating out the config file.
+  """
+  @spec uri_auth(Keyword.t) :: String.t
+  def uri_auth(options \\ get_config()) do
+    uri(options) <> "_auth"
+  end
+
+  @doc """
   Get the default realm.
   """
   @spec get_realm :: String.t

@@ -65,7 +65,7 @@ defmodule Spell.Role.Caller do
   """
   def handle_message(%Message{type: :result,
                               args: [request | _]} = result,
-                     peer, state) do
+                     _peer, state) do
     case Dict.pop(state.call_requests, request) do
       {nil, _} ->
         {:error, :no_call}

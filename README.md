@@ -22,8 +22,6 @@ appropriate.
 - Easy to extend: add new roles, transports, or serializers without changing
 the core library:
 
-Be sure to understand [peer owners](#peer-owner) before using.
-
 ## Getting Help
 
 Spell uses GitHub [issues](https://github.com/MyMedsAndMe/spell/issues) and
@@ -34,7 +32,7 @@ welcome there. See [librelist](http://librelist.com/) for how to sign up.
 
 ## How it Works
 
-You can run the examples which follow, though first you'll need
+You can run the examples you're about to run into, though first you'll need
 [crossbar.io](http://crossbar.io/). You might install it via pip:
 
 ```shell
@@ -92,17 +90,25 @@ By default a client peer is started with the above four client roles:
 Spell.connect("ws://example.org", realm: "realm1")
 ```
 
+
 See `Spell.Peer` and `Spell.Role`.
 
-#### Peer Owner
+#### Authentication
 
-Spell has a very sharp edge at the moment. In line with it's Erlang socket
-heritage, each peer has an owner, which the peer sends all WAMP related messages
-to. As a result, if you call a synchronous function from a process which isn't
-the target peer's owner, the calling process will never receive the message, the
-command will timeout, and the owner process will receive an unexpected message.
+Spell supports
+[WAMP Challenge Response Authentication (CRA)](https://github.com/tavendo/WAMP/blob/master/spec/advanced.md#challenge-response-authentication). This
+is flexible, and can be used to back a variety of authentication schemes.
 
-See the [open issue](https://github.com/MyMedsAndMe/spell/issues/10).
+To setup a Spell peer with authentication:
+
+```elixir
+alias Spell.Authentication.CRA
+authentication = [id: "harry", schemes: [{CRA, [secret: "alohamora"]}]]
+Spell.connect("ws://example.org", realm: "realm1",
+              authentication: authentication)
+```
+
+See `Spell.Authentication`.
 
 ### PubSub
 

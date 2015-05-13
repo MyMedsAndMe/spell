@@ -5,9 +5,9 @@ defmodule Spell.HelloTest do
   alias Spell.Message
 
   setup do
-    {:ok, peer} = Crossbar.uri(Crossbar.get_config())
-      |> Spell.connect(realm: Crossbar.get_realm(),
-                       features: %{publisher: %{}})
+    {:ok, peer} = Spell.connect(Crossbar.uri(),
+                                realm: Crossbar.get_realm(),
+                                features: %{publisher: %{}})
     on_exit fn -> Spell.close(peer) end
     {:ok, peer: peer}
   end
@@ -16,7 +16,6 @@ defmodule Spell.HelloTest do
     # Not a great test...
     assert is_pid(peer)
   end
-
 
   # Pending bcause this results in the lobbing of error messages. Need to
   # turn them off or capture stdin.
@@ -28,8 +27,6 @@ defmodule Spell.HelloTest do
     assert :ok == Peer.send_message(peer, Message.new!(type: :hello, args: args))
     assert_receive {Peer, ^peer, {:error, _}}
     refute_receive {Peer, ^peer, %Message{type: :welcome}}
-
-    # TODO: make a pass-through role and check if messages are delivered
   end
 
 end

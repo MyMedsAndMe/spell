@@ -38,6 +38,20 @@
                         },
                         "<%= String.replace(@path, ~r"^/", "") %>": {
                             "type": "websocket"
+                        },
+                        "<%= String.replace(@path, ~r"^/", "") <> "_auth" %>": {
+                            "type": "websocket",
+                            "auth": {
+                                "wampcra": {
+                                    "type": "static",
+                                    "users": {
+                                        "alice": {
+                                            "secret": "alice-secret",
+                                            "role": "anonymous"
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

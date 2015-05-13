@@ -11,6 +11,7 @@ defmodule Spell.Role.Session do
 
   alias Spell.Message
   alias Spell.Peer
+  alias Spell.Authentication, as: Auth
 
   require Logger
 
@@ -19,10 +20,18 @@ defmodule Spell.Role.Session do
   defstruct [
     :realm,
     :roles,
+    :authentication,
+    :auth_lookup,
     session: nil,
     details: nil,
     pid_hello: nil,
     pid_goodbye: nil]
+
+  # TODO: rest of types
+  @type t :: %__MODULE__{
+    realm: String.t,
+    authentication: Keyword.t,
+    session: integer}
 
   @goodbye_close_realm "wamp.error.close_realm"
   @goodbye_and_out     "wamp.error.goodbye_and_out"
@@ -65,22 +74,25 @@ defmodule Spell.Role.Session do
   # Role Callbacks
 
   @doc """
-  Returns the state with the specified realm and role.
+  Returns the state with the specified realm, role, and authentication info.
 
    * `peer_options :: Map.t`
   """
   def init(%{realm: nil}, _) do
     {:error, :no_realm}
   end
-  def init(%{realm: realm, role: role}, []) when is_binary(realm) do
-    {:ok, %__MODULE__{realm: realm, roles: role.features}}
+  def init(%{role: role}, options) do
+    auth_lookup = get_in(options, [:authentication, :schemes])
+      |> Auth.schemes_to_lookup()
+    {:ok, struct(%__MODULE__{roles: role.features, auth_lookup: auth_lookup},
+                 options)}
   end
 
   @doc """
-  Send a HELLO message when the connection is opened.
+  Send a `HELLO` message when the connection is opened.
   """
   def on_open(peer, %{realm: realm} = state) when realm != nil do
-    {:ok, hello} = new_hello(state.realm, %{roles: state.roles})
+    {:ok, hello} = new_hello(state.realm, get_hello_details(state))
     case Peer.send_message(peer, hello) do
       :ok ->
         {:ok, %{state | pid_hello: peer.owner}}
@@ -90,11 +102,31 @@ defmodule Spell.Role.Session do
   end
 
   @doc """
-  Handle WELCOME, GOODBYE, and ABORT messages.
+  Handle `CHALLENGE`, `WELCOME`, `GOODBYE`, and `ABORT` messages.
   """
+  def handle_message(%Message{type: :challenge,
+                              args: [name, details]} = challenge,
+                     peer, %{pid_hello: pid_hello} = state)
+      when is_pid(pid_hello) do
+   case get_auth_by_name(state, name) do
+     nil ->
+       {:error, {:challenge, :bad_scheme}}
+     {auth_module, options} when is_atom(auth_module) ->
+       case auth_module.response(details, options) do
+         {:ok, signature, details} ->
+           {:ok, message} = new_authenticate(signature, details)
+           :ok = Peer.send_message(peer, message)
+           {:ok, state}
+         {:error, reason} ->
+           {:error, {:challenge, reason}}
+       end
+    end
+  end
+
   def handle_message(%Message{type: :welcome,
                               args: [session, details]} = welcome,
-                     _peer, %{pid_hello: pid_hello} = state) when is_pid(pid_hello) do
+                     _peer, %{pid_hello: pid_hello} = state)
+      when is_pid(pid_hello) do
     :ok = Peer.notify(pid_hello, welcome)
     {:ok, %{state | session: session, details: details, pid_hello: nil}}
   end
@@ -130,10 +162,36 @@ defmodule Spell.Role.Session do
     Message.new(type: :hello, args: [realm, details])
   end
 
+  @spec get_hello_details(t) :: map
+  defp get_hello_details(state) do
+    case state.authentication do
+      nil -> %{}
+      authentication -> Auth.get_details(authentication)
+    end
+    |> Dict.merge(%{roles: state.roles})
+  end
+
   @spec new_goodbye(String.t, map) :: {:ok, Message.t} | {:error, any}
   defp new_goodbye(reason, details) do
     # TODO: if `reason` is an atom, lookup its value
     Message.new(type: :goodbye, args: [details, reason])
+  end
+
+  @spec new_authenticate(String.t, map) :: {:ok, Message.t} | {:error, any}
+  def new_authenticate(signature, details) do
+    Message.new(type: :authenticate, args: [signature, details])
+  end
+
+  @spec get_auth_by_name(t, String.t) :: {module, Keyword.t} | nil
+  defp get_auth_by_name(state, name) do
+    case Dict.get(state.auth_lookup, name) do
+      nil -> nil
+      auth_module when is_atom(auth_module) ->
+        case Dict.get(state.authentication[:schemes], auth_module) do
+          nil -> nil
+          options -> {auth_module, options}
+        end
+    end
   end
 
 end

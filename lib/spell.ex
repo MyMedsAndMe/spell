@@ -9,7 +9,9 @@ defmodule Spell do
 
   Once up, you can connect a new peer by calling:
 
-      {:ok, peer} = Spell.connect(Crossbar.uri, realm: Crossbar.realm)
+      {:ok, peer} = Spell.connect(Crossbar.uri,
+                                  realm: Crossbar.realm,
+  )
 
   ## Peer Interface
 
@@ -120,6 +122,10 @@ defmodule Spell do
      retry connecting
    * `:retry_interval = #{@default_retry_interval} :: integer` inteveral
      in milliseconds between retries
+   * `:authentication :: Keyword.t`, defaults to `[]`
+       * `:id :: String.t` the `authid` to authenticate with
+       * `:schemes :: Keyword.t` the authentication schemes supported. See
+         `Spell.Authenticate`.
 
   """
   # TODO: there should be an asynchronous connect which doesn't await the WELCOME
@@ -187,11 +193,13 @@ defmodule Spell do
     case Dict.get(options, :roles, @default_roles)
          |> Role.normalize_role_options() do
       {:ok, role_options} ->
+        session_options = Keyword.take(options, [:realm, :authentication])
         %{transport: Keyword.get(options, :transport),
           serializer: Keyword.get(options, :serializer,
                                   @default_serializer_module),
           owner: Keyword.get(options, :owner),
-          role: %{options: Keyword.put_new(role_options, Role.Session, []),
+          role: %{options: Keyword.put_new(role_options, Role.Session,
+                                           session_options),
                   features: Keyword.get(options, :features,
                                         Role.collect_features(role_options))},
           realm: Keyword.get(options, :realm),
