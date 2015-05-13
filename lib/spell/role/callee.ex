@@ -66,7 +66,7 @@ defmodule Spell.Role.Callee do
   end
 
   @doc """
-  Send a YIELD message from `peer` for `invocation`.
+  Send a `YIELD` message from `peer` for `invocation`.
   """
   def cast_yield(peer, invocation, options \\ []) do
     {:ok, yield} = new_yield_message(invocation, options)
@@ -76,7 +76,7 @@ defmodule Spell.Role.Callee do
   end
 
   @doc """
-  Receive a REGISTERED message from `peer` with `register_id`.
+  Receive a `REGISTERED` message from `peer` with `register_id`.
   """
   def receive_registered(peer, register_id) do
     receive do
@@ -89,7 +89,7 @@ defmodule Spell.Role.Callee do
   end
 
   @doc """
-  Receive an UNREGISTERED message from `peer` with `unregister_id`.
+  Receive an `UNREGISTERED` message from `peer` with `unregister_id`.
   """
   def receive_unregistered(peer, unregister_id) do
     receive do
