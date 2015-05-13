@@ -42,8 +42,8 @@ defmodule Spell.RoleTest do
       {:ok, {:messaged, message, state}}
     end
 
-    def handle_cast(message, _peer, _state) do
-      {:ok, {:casted, message}}
+    def handle_call(message, _from, _peer, state) do
+      {:ok, {:called, message}, state}
     end
   end
 
@@ -82,10 +82,10 @@ defmodule Spell.RoleTest do
       Role.map_handle_message([{MapRole, :state}], :msg, :peer)
   end
 
-  test "map_handle_cast/2" do
-    assert {:error, :no_role} == Role.cast([], :role, :peer, :state)
-    assert {:ok, [{Spell.RoleTest.MapRole, {:casted, :state}}]} ==
-      Role.cast([{MapRole, :state}], MapRole, :peer, :state)
+  test "call/5" do
+    assert {:error, :no_role} == Role.call([], :role, :message, self(), :peer)
+    assert {:ok, {:called, :message}, [{Spell.RoleTest.MapRole, :state}]} ==
+      Role.call([{MapRole, :state}], MapRole, :message, self(), :peer)
   end
 
 end

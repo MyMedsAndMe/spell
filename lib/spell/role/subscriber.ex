@@ -10,6 +10,10 @@ defmodule Spell.Role.Subscriber do
   alias Spell.Peer
   alias Spell.Message
 
+  defstruct [subscribe_requests: HashDict.new(),
+             unsubscribe_requests: HashDict.new(),
+             subscriptions: HashDict.new()]
+
   @timeout 1000
 
   # Public Interface
@@ -24,7 +28,7 @@ defmodule Spell.Role.Subscriber do
     # TODO: `defmessage` to avoid this leaky abstraction
     {:ok, %{args: [subscribe_id | _]} = message} =
       new_subscribe_message(topic, options)
-    :ok = Peer.send_message(peer, message)
+    :ok = Peer.call(peer, __MODULE__, {:send, message})
     {:ok, subscribe_id}
   end
 
@@ -86,13 +90,19 @@ defmodule Spell.Role.Subscriber do
   def cast_unsubscribe(peer, subscription) do
     {:ok, %{args: [unsubscribe | _]} = message} =
       new_unsubscribe_message(subscription)
-    Peer.send_message(peer, message)
-    {:ok, unsubscribe}
+    case Peer.call(peer, __MODULE__, {:send, message}) do
+      :ok              -> {:ok, unsubscribe}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   def call_unsubscribe(peer, subscription) do
-    {:ok, unsubscribe} = cast_unsubscribe(peer, subscription)
-    receive_unsubscribed(peer, unsubscribe)
+    case cast_unsubscribe(peer, subscription) do
+      {:ok, unsubscribe} ->
+        receive_unsubscribed(peer, unsubscribe)
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   def receive_unsubscribed(peer, unsubscribe) do
@@ -111,14 +121,85 @@ defmodule Spell.Role.Subscriber do
     {:subscriber, %{}}
   end
 
-  def handle_message(%{type: type} = message, peer, state)
-      when type == :subscribed or type == :unsubscribed or type == :event do
-    :ok = Peer.send_to_owner(peer, message)
-    {:ok, state}
+  def init(_peer, []) do
+    {:ok, %__MODULE__{}}
+  end
+
+  @doc """
+  Handle `SUBSCRIBED`, `UNSUBSCRIBED`, and `EVENT` messages.
+  """
+  def handle_message(%Message{type: :subscribed,
+                              args: [request, subscription]} = message,
+                     _peer, state) do
+    case Dict.pop(state.subscribe_requests, request) do
+      {nil, _} ->
+        {:error, {:subscribe, :no_request}}
+      {pid, subscribe_requests} ->
+        :ok = Peer.notify(pid, message)
+        subscriptions = Dict.put_new(state.subscriptions, subscription, pid)
+        {:ok, %{state |
+                subscribe_requests: subscribe_requests,
+                subscriptions: subscriptions}}
+    end
+  end
+
+  def handle_message(%Message{type: :unsubscribed,
+                              args: [request]} = message,
+                     _peer, state) do
+    case Dict.pop(state.unsubscribe_requests, request) do
+      {nil, _} ->
+        {:error, {:unsubscribe, :no_request}}
+      {{subscription, pid}, unsubscribe_requests} ->
+        :ok = Peer.notify(pid, message)
+        subscriptions = Dict.delete(state.subscriptions, subscription)
+        {:ok, %{state |
+                unsubscribe_requests: unsubscribe_requests,
+                subscriptions: subscriptions}}
+    end
+  end
+
+  def handle_message(%Message{type: :event,
+                              args: [subscription | _]} = message,
+                     _peer, state) do
+    case Dict.get(state.subscriptions, subscription) do
+      nil ->
+        {:error, :no_subscription}
+      pid ->
+        :ok = Peer.notify(pid, message)
+        {:ok, state}
+    end
   end
 
   def handle_message(message, peer, state) do
     super(message, peer, state)
+  end
+
+  @doc """
+  The `handle_call` function is used to send `SUBSCRIBE` and `UNSUBSCRIBE`
+  messages.
+  """
+  def handle_call({:send, %Message{type: :subscribe,
+                                   args: [request | _]} = message},
+                  {pid, _}, peer, state) do
+    :ok = Peer.send_message(peer, message)
+    subscribe_requests = Dict.put_new(state.subscribe_requests, request, pid)
+    {:ok, :ok, %{state | subscribe_requests: subscribe_requests}}
+  end
+
+  def handle_call({:send, %Message{type: :unsubscribe,
+                                   args: [request, subscription]} = message},
+                  {pid, _}, peer, state) do
+    case Dict.get(state.subscriptions, subscription) do
+      nil ->
+        {:ok, {:error, :no_subscription}, state}
+      ^pid ->
+        :ok = Peer.send_message(peer, message)
+        unsubscribe_requests = Dict.put_new(state.unsubscribe_requests, request,
+                                            {subscription, pid})
+        {:ok, :ok, %{state | unsubscribe_requests: unsubscribe_requests}}
+      other_pid when is_pid(other_pid) ->
+        {:ok, {:error, :not_owner}, state}
+    end
   end
 
   # Private Functions

@@ -22,7 +22,6 @@ appropriate.
 - Easy to extend: add new roles, transports, or serializers without changing
 the core library:
 
-
 Be sure to understand [peer owners](#peer-owner) before using.
 
 ## Getting Help
@@ -35,7 +34,7 @@ welcome there. See [librelist](http://librelist.com/) for how to sign up.
 
 ## How it Works
 
-You can run the examples you're about to run into, though first you'll need
+You can run the examples which follow, though first you'll need
 [crossbar.io](http://crossbar.io/). You might install it via pip:
 
 ```shell
