@@ -22,7 +22,8 @@ defmodule Spell.Mixfile do
   def application do
     [applications: [:logger,
                     :websocket_client,
-                    :poison],
+                    :poison,
+                    :pbkdf2],
     mod: {Spell, []}]
   end
 
@@ -52,6 +53,8 @@ defmodule Spell.Mixfile do
      {:poison, "~> 1.4.0"},
      # Req'd by: `Spell.Serializer.MessagePack`
      {:msgpax, "~> 0.7"},
+     # Req'd by: `Spell.Authentication.CRA`
+     {:pbkdf2, github: "pma/erlang-pbkdf2", branch: "master"},
      # Doc deps
      {:earmark, "~> 0.1", only: :doc},
      {:ex_doc, "~> 0.7", only: :doc}

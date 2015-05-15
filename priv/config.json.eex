@@ -46,8 +46,11 @@
                                     "type": "static",
                                     "users": {
                                         "alice": {
-                                            "secret": "alice-secret",
-                                            "role": "anonymous"
+                                            "secret": "MOv/dV4AF/yMxvz38oMjzA==",
+                                            "role": "anonymous",
+                                            "salt": "salt123",
+                                            "iterations": 100,
+                                            "keylen": 16
                                         }
                                     }
                                 }
