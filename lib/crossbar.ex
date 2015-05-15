@@ -182,7 +182,10 @@ defmodule Crossbar do
     :ok = create_config()
     executable = Dict.get(opts, :executable, @crossbar_exec)
     arguments  = Dict.get(opts, :arguments, @crossbar_args)
-    Logger.debug("Starting crossbar: #{inspect([executable | arguments])}")
+    Logger.debug(fn ->
+      command = Enum.intersperse([executable, "start" | arguments], " ")
+      ["Starting crossbar: ", command]
+    end)
     port = Port.open({:spawn_executable, executable}, port_opts(arguments))
     # Wait for crossbar to start.
     case await do

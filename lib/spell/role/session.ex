@@ -105,7 +105,7 @@ defmodule Spell.Role.Session do
   Handle `CHALLENGE`, `WELCOME`, `GOODBYE`, and `ABORT` messages.
   """
   def handle_message(%Message{type: :challenge,
-                              args: [name, details]} = challenge,
+                              args: [name, details]},
                      peer, %{pid_hello: pid_hello} = state)
       when is_pid(pid_hello) do
    case get_auth_by_name(state, name) do
