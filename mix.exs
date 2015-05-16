@@ -64,6 +64,7 @@ defmodule Spell.Mixfile do
   defp aliases do
     ["test.unit":        "test --exclude integration --exclude pending",
      "test.integration": "test --only integration --exclude pending",
+     "test.all": &test_all/1,
      "spell.example.pubsub": "run examples/pubsub.exs",
      "spell.example.rpc":    "run examples/rpc.exs"]
   end
@@ -73,5 +74,22 @@ defmodule Spell.Mixfile do
         # TODO: change markdown compiler to once that supports gfm
         #readme: "README.md"
     ]
+  end
+
+  defp test_all(args) do
+    # args = if IO.ANSI.enabled?, do: ["--color"|args], else: ["--no-color"|args]
+    # Mix.Task.run "test", args
+
+    for serializer <- [Spell.Serializer.JSON, Spell.Serializer.MessagePack] do
+      IO.puts "==> Running integration tests for serializer=#{serializer}"
+
+      Application.put_env(:spell, :serializer, serializer)
+
+      {_, res} = System.cmd "mix", ["test"|args],
+                            into: IO.binstream(:stdio, :line)
+      if res > 0 do
+        System.at_exit(fn _ -> exit({:shutdown, 1}) end)
+      end
+    end
   end
 end

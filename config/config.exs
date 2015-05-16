@@ -2,6 +2,9 @@ use Mix.Config
 
 log_level = :info
 
+config :spell,
+  serializer: Spell.Serializer.JSON
+
 config :logger,
   # handle_otp_reports: true,
   # handle_sasl_reports: true,

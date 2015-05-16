@@ -67,7 +67,7 @@ defmodule Spell.Transport.WebSocket do
   end
 
   def websocket_info({:send, raw_message}, _conn_state, state) do
-    Logger.debug(fn -> "Sending message over websocket: #{inspect(raw_message)}" end)
+    Logger.info(fn -> "Sending message over websocket(#{inspect state.serializer_info.frame_type}): #{inspect(raw_message)}" end)
     {:reply, {state.serializer_info.frame_type, raw_message}, state}
   end
 
