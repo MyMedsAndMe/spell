@@ -9,6 +9,8 @@ defmodule Spell.Role.Session do
   """
   use Spell.Role
 
+  import Spell.Message, only: [receive_message: 3]
+
   alias Spell.Message
   alias Spell.Peer
   alias Spell.Authentication, as: Auth
@@ -70,6 +72,13 @@ defmodule Spell.Role.Session do
   """
   @spec await_welcome(pid) :: {:ok, Message.t} | {:error, :timeout}
   def await_welcome(peer), do: Peer.await(peer, :welcome)
+
+  def receive_welcome(peer) do
+    receive_message peer, :welcome do
+      {:ok, _} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   # Role Callbacks
 

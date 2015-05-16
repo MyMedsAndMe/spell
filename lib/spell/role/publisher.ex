@@ -5,6 +5,8 @@ defmodule Spell.Role.Publisher do
   """
   use Spell.Role
 
+  import Spell.Message, only: [receive_message: 3]
+
   alias Spell.Message
   alias Spell.Peer
 
@@ -39,12 +41,19 @@ defmodule Spell.Role.Publisher do
                 Keyword.put(options, :options, %{acknowledge: true})
               end
     {:ok, request_id} = cast_publish(peer, topic, options)
-    receive do
-      {Peer, ^peer, %Message{type: :published,
-                              args: [^request_id, publication]}} ->
-        {:ok, publication}
-    after
-      1000 -> {:error, :timeout}
+    receive_published(peer, request_id)
+  end
+
+  @doc """
+  Receive a `PUBLISHED` message from `peer` for `request_id`.
+
+  Note: The `PUBLISH` request must set `acknowledge: true` to receive a
+  response.
+  """
+  def receive_published(peer, request_id) do
+    receive_message peer, :published do
+      {:ok, [^request_id, publication]} -> {:ok, publication}
+      {:error, reason}                  -> {:error, reason}
     end
   end
 

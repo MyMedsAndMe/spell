@@ -67,6 +67,75 @@ defmodule Spell.Message do
     code: integer,
     args: args}
 
+  # Public Macros
+
+  @doc """
+  This macro expands familiar `:ok`/`:error` clauses to a receive
+  clause for their respective WAMP message from `peer` given `type`.
+
+  This macro is meant to be a convenience -- feel free to drop down to the
+  undelrying `receive`.
+
+  ## Example
+
+      def receive_subscribed(peer, subscribe_id) do
+        receive_message peer, :subscribed do
+          {:ok, [^subscribe_id, subscription]} -> {:ok, subscription}
+          {:error, reason} -> {:error, reason}
+        end
+      end
+
+  is expanded to
+
+      def receive_subscribed(peer, subscribe_id) do
+        receive do
+          {Peer, ^peer, %Message{type: :subscribed,
+                                 args: [^subscribe_id, subscription]}} ->
+            {:ok, subscription}
+          {Peer, ^peer, %Message{type: :error, args: [33, _, reason | _]}} ->
+            case Message.normalize_error(error) do
+              {:ok, reason} ->
+                 {:error, reason}
+              {:error, _, reason} ->
+                {:error, reason}
+            end
+        after
+          @timeout -> {:error, :timeout}
+        end
+      end
+
+  """
+  defmacro receive_message(peer, type, body) do
+    code = get_code_for_type(type)
+    branches = (body[:do] || [])
+    |> Enum.map(fn
+      {:->, _, [[match], branch_body]} ->
+        {match, guards} = case match do
+                            {:when, _, [match, guards]} -> {match, guards}
+                            match                       -> {match, true}
+                          end
+        case match do
+          {:ok, args} ->
+            quote do
+              {Spell.Peer, ^unquote(peer),
+               %Spell.Message{type: unquote(type), args: unquote(args)}}
+              when unquote(guards) -> unquote(branch_body)
+            end
+          # TODO: Support matching against details, arguments, arguments_kw
+          {:error, reason} ->
+            quote do
+              {Spell.Peer, ^unquote(peer),
+               %Spell.Message{type: :error,
+                              args: [unquote(code), _details, unquote(reason) | _]}}
+              when unquote(guards) -> unquote(branch_body)
+            end
+        end
+    end) |> Enum.map(fn [branch] -> branch end)
+    quote do
+      receive do unquote(branches) after 1000 -> {:error, :timeout} end
+    end
+  end
+
   # Public Functions
 
   @doc """

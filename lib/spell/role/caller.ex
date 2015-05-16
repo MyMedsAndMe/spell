@@ -4,6 +4,8 @@ defmodule Spell.Role.Caller do
   """
   use Spell.Role
 
+  import Spell.Message, only: [receive_message: 3]
+
   alias Spell.Message
   alias Spell.Peer
 
@@ -43,12 +45,10 @@ defmodule Spell.Role.Caller do
   Block to receive from `peer` result of `call_id`.
   """
   def receive_result(peer, call_id) do
-    receive do
-      {Peer, ^peer,
-       %Message{type: :result, args: [^call_id | _]} = result} ->
-        {:ok, result}
-    after
-      1000 -> {:error, :timeout}
+    receive_message peer, :result do
+      # TODO: transform results to something dict-like
+      {:ok, [^call_id | _] = result} -> {:ok, result}
+      {:error, reason}               -> {:error, reason}
     end
   end
 

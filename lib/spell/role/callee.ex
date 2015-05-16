@@ -4,6 +4,8 @@ defmodule Spell.Role.Callee do
   """
   use Spell.Role
 
+  import Spell.Message, only: [receive_message: 3]
+
   alias Spell.Message
   alias Spell.Peer
 
@@ -79,12 +81,9 @@ defmodule Spell.Role.Callee do
   Receive a `REGISTERED` message from `peer` with `register_id`.
   """
   def receive_registered(peer, register_id) do
-    receive do
-      {Peer, ^peer,
-       %Message{type: :registered, args: [^register_id, registration]}} ->
-        {:ok, registration}
-    after
-      1000 -> {:error, :timeout}
+    receive_message peer, :registered do
+      {:ok, [^register_id, registration]} -> {:ok, registration}
+      {:error, reason}                    -> {:error, reason}
     end
   end
 
@@ -92,27 +91,20 @@ defmodule Spell.Role.Callee do
   Receive an `UNREGISTERED` message from `peer` with `unregister_id`.
   """
   def receive_unregistered(peer, unregister_id) do
-    receive do
-      {Peer, ^peer,
-       %Message{type: :unregistered, args: [^unregister_id]}} ->
-        :ok
-    after
-      1000 -> {:error, :timeout}
+    receive_message peer, :unregistered do
+      {:ok, [^unregister_id]} -> :ok
+      {:error, reason}        -> {:error, reason}
     end
   end
 
   @spec receive_invocation(pid, Message.wamp_id) ::
     {:ok, map} | {:error, any}
   def receive_invocation(peer, invocation) do
-    receive do
-      {Peer, ^peer,
-       # TODO: handle arguments
-       %Message{type: :invocation,
-                 args: [^invocation, registration, details]}} ->
-        {:ok, %{id: invocation, registration: registration,
-                details: details}}
-    after
-      1000 -> {:error, :timeout}
+    receive_message peer, :invocation do
+      {:ok, [^invocation, registration, details]} ->
+        {:ok, %{id: invocation, registration: registration, details: details}}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

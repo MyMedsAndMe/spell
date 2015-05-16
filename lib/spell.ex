@@ -48,7 +48,7 @@ defmodule Spell do
 
     * JSON: `Spell.Serializer.JSON`
 
-  See `Spell.Serizlier` for how to create new serializers.
+  See `Spell.Serializer` for how to create new serializers.
 
   """
   use Application
@@ -61,7 +61,8 @@ defmodule Spell do
   alias Spell.Serializer
   alias Spell.Role
 
-  # Delegate commonly used role functions into Spell.
+  # Delegate commonly used role functions into `Spell`.
+  # WARNING: `defdelegate` drops the documentation -- kills the illusion.
   defdelegate [cast_goodbye(peer),
                cast_goodbye(peer, options),
                call_goodbye(peer),
@@ -69,7 +70,8 @@ defmodule Spell do
   defdelegate [cast_publish(peer, topic),
                cast_publish(peer, topic, options),
                call_publish(peer, topic),
-               call_publish(peer, topic, options)], to: Role.Publisher
+               call_publish(peer, topic, options),
+               receive_published(peer, request_id)], to: Role.Publisher
   defdelegate [cast_subscribe(peer, topic),
                cast_subscribe(peer, topic, options),
                call_subscribe(peer, topic),

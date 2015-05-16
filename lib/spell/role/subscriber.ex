@@ -6,6 +6,7 @@ defmodule Spell.Role.Subscriber do
   use Spell.Role
 
   require Logger
+  import Spell.Message, only: [receive_message: 3]
 
   alias Spell.Peer
   alias Spell.Message
@@ -58,11 +59,8 @@ defmodule Spell.Role.Subscriber do
   | {:error, :timeout}
   def receive_event(peer, subscription)
       when is_pid(peer) and is_integer(subscription) do
-    receive do
-      {Spell.Peer, ^peer,
-       %Message{type: :event,
-                args: [^subscription, publication, details | rest]}} ->
-        # This would also be useful for RPC -- refactor out to util?
+    receive_message peer, :event do
+      {:ok, [^subscription, publication, details | rest]} ->
         {arguments, arguments_kw} = case rest do
                                       [] ->
                                         {[], %{}}
@@ -76,8 +74,8 @@ defmodule Spell.Role.Subscriber do
                 details: details,
                 arguments: arguments,
                 arguments_kw: arguments_kw}}
-    after
-      @timeout -> {:error, :timeout}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -106,14 +104,20 @@ defmodule Spell.Role.Subscriber do
   end
 
   def receive_unsubscribed(peer, unsubscribe) do
-    receive do
-      {Spell.Peer, ^peer,
-        %Message{type: :unsubscribed, args: [^unsubscribe]}} ->
-        :ok
-    after
-      @timeout -> {:error, :timeout}
+    receive_message peer, :unsubscribed do
+      {:ok, [^unsubscribe]} -> :ok
+      {:error, reason}      -> {:error, reason}
     end
   end
+  # def receive_unsubscribed(peer, unsubscribe) do
+  #   receive do
+  #     {Spell.Peer, ^peer,
+  #       %Message{type: :unsubscribed, args: [^unsubscribe]}} ->
+  #       :ok
+  #   after
+  #     @timeout -> {:error, :timeout}
+  #   end
+  # end
 
   # Role Callbacks
 
