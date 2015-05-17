@@ -19,7 +19,6 @@ defmodule Spell.RPCTest do
     {:ok, caller: caller, callee: callee}
   end
 
-  @tag :integration
   test "rpc end to end", %{caller: caller, callee: callee} do
     {:ok, registration} = Spell.call_register(callee, @procedure)
     {:ok, call_id} = Spell.cast_call(caller, @procedure)
