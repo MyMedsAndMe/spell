@@ -108,7 +108,7 @@ defmodule PubSub do
   """
   def new_peer(roles, options) do
     uri   = Keyword.get(options, :uri, Crossbar.uri)
-    realm = Keyword.get(options, :realm, Crossbar.realm)
+    realm = Keyword.get(options, :realm, Crossbar.get_realm())
     Spell.connect(uri, realm: realm, roles: roles)
   end
 
