@@ -191,7 +191,7 @@ callee = Spell.connect(Crossbar.uri,
                        roles: [Spell.Role.Callee])
 
 # `call_register/2,3` synchronously registers the procedure.
-{:ok, registration} = Spell.call_register(subscriber, procedure)
+{:ok, registration} = Spell.call_register(callee, procedure)
 
 # Create a peer with the caller role.
 caller = Spell.connect(Crossbar.uri,
