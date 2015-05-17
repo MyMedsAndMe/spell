@@ -12,8 +12,10 @@ defmodule Spell.Mixfile do
      deps: deps,
      aliases: aliases,
      docs: docs,
-     preferred_cli_env: ["test.unit": :test,
+     preferred_cli_env: ["test.all": :test,
+                         "test.unit": :test,
                          "test.integration": :test,
+                         "test.integration.all": :test,
                          "hex.docs": :doc,
                          docs: :doc]
     ]
@@ -62,9 +64,10 @@ defmodule Spell.Mixfile do
   end
 
   defp aliases do
-    ["test.unit":        "test --exclude integration --exclude pending",
-     "test.integration": "test --only integration --exclude pending",
-     "test.all": &test_all/1,
+    ["test.all": ["test.unit", "test.integration.all"],
+     "test.unit":        "test test/unit",
+     "test.integration": "test test/integration",
+     "test.integration.all": &test_integration_all/1,
      "spell.example.pubsub": "run examples/pubsub.exs",
      "spell.example.rpc":    "run examples/rpc.exs"]
   end
@@ -76,17 +79,15 @@ defmodule Spell.Mixfile do
     ]
   end
 
-  defp test_all(args) do
-    # args = if IO.ANSI.enabled?, do: ["--color"|args], else: ["--no-color"|args]
-    # Mix.Task.run "test", args
+  defp test_integration_all(args) do
+    args = if IO.ANSI.enabled?, do: ["--color"|args], else: ["--no-color"|args]
 
-    for serializer <- [Spell.Serializer.JSON, Spell.Serializer.MessagePack] do
+    for serializer <- ["json", "msgpack"] do
       IO.puts "==> Running integration tests for serializer=#{serializer}"
 
-      Application.put_env(:spell, :serializer, serializer)
-
-      {_, res} = System.cmd "mix", ["test"|args],
-                            into: IO.binstream(:stdio, :line)
+      {_, res} = System.cmd "mix", ["test.integration"|args],
+                            into: IO.binstream(:stdio, :line),
+                            env: [{"SERIALIZER", serializer}]
       if res > 0 do
         System.at_exit(fn _ -> exit({:shutdown, 1}) end)
       end
