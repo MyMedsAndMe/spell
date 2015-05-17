@@ -15,7 +15,6 @@ defmodule Spell.Mixfile do
      preferred_cli_env: ["test.all": :test,
                          "test.unit": :test,
                          "test.integration": :test,
-                         "test.integration.all": :test,
                          "hex.docs": :doc,
                          docs: :doc]
     ]
@@ -64,10 +63,8 @@ defmodule Spell.Mixfile do
   end
 
   defp aliases do
-    ["test.all": ["test.unit", "test.integration.all"],
+    ["test.all": ["test.unit", "test.integration"],
      "test.unit":        "test test/unit",
-     "test.integration": "test test/integration",
-     "test.integration.all": &test_integration_all/1,
      "spell.example.pubsub": "run examples/pubsub.exs",
      "spell.example.rpc":    "run examples/rpc.exs"]
   end
@@ -77,20 +74,5 @@ defmodule Spell.Mixfile do
         # TODO: change markdown compiler to once that supports gfm
         #readme: "README.md"
     ]
-  end
-
-  defp test_integration_all(args) do
-    args = if IO.ANSI.enabled?, do: ["--color"|args], else: ["--no-color"|args]
-
-    for serializer <- ["json", "msgpack"] do
-      IO.puts "==> Running integration tests for serializer=#{serializer}"
-
-      {_, res} = System.cmd "mix", ["test.integration"|args],
-                            into: IO.binstream(:stdio, :line),
-                            env: [{"SERIALIZER", serializer}]
-      if res > 0 do
-        System.at_exit(fn _ -> exit({:shutdown, 1}) end)
-      end
-    end
   end
 end

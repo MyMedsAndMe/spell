@@ -59,7 +59,6 @@ defmodule Spell do
   alias Spell.Peer
   alias Spell.Message
   alias Spell.Transport
-  alias Spell.Serializer
   alias Spell.Role
 
   # Delegate commonly used role functions into `Spell`.

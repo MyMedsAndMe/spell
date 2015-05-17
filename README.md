@@ -265,9 +265,22 @@ To run Spell's integration tests, you must have
 To run the tests:
 
 ```shell
-$ mix test              # all tests
-$ mix test.integration  # only integration tests
-$ mix test.unit         # only unit tests
+# run unit and integration tests with default configuration
+$ mix test
+
+# run only unit tests
+$ mix test.unit
+
+# run integration tests using a specific serializer
+$ SERIALIZER=json mix test.integration
+$ SERIALIZER=msgpack mix test.integration
+
+# run integration tests with all possible serializers
+$ SERIALIZER=all mix test.integration
+$ mix test.integration
+
+# run unit and integration tests with all possible configurations
+$ mix test.all
 ```
 
 The Crossbar.io test server can be configured to listen on a different port
