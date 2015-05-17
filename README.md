@@ -39,6 +39,13 @@ You can run the examples you're about to run into, though first you'll need
 $ pip install crossbar
 ```
 
+If you are going to use MessagePack you will need to install the optional
+crossbar package.
+
+```shell
+$ pip install crossbar[msgpack]
+```
+
 Start an Elixir shell:
 
 ```bash

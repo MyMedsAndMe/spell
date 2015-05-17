@@ -5,8 +5,8 @@ otp_release:
   - 17.3
 sudo: true
 before_script:
-  - sudo pip install crossbar
-script: "mix test && mix spell.example.pubsub"
+  - sudo pip install crossbar[msgpack]
+script: mix test.all && mix spell.example.pubsub > /dev/null
 after_success:
   - pkill -f crossbar
 notifications:
