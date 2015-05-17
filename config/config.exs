@@ -17,5 +17,5 @@ config :logger, :console,
 
 config_file = "#{Mix.env}.exs"
 if Path.join("config", config_file) |> Path.expand |> File.exists? do
-  #import_config(config_file)
+  import_config(config_file)
 end
