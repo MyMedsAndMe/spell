@@ -47,6 +47,7 @@ defmodule Spell do
   ### Serializers
 
     * JSON: `Spell.Serializer.JSON`
+    * MessagePack: `Spell.Serializer.MessagePack`
 
   See `Spell.Serializer` for how to create new serializers.
 
