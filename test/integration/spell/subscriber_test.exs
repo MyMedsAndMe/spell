@@ -13,14 +13,12 @@ defmodule Spell.SubscriberTest do
     {:ok, peer: peer}
   end
 
-  @tag :integration
   test "cast_subscribe/2", %{peer: peer} do
     {:ok, subscriber_id} = Subscriber.cast_subscribe(peer, @topic)
     assert is_integer(subscriber_id)
     assert_receive {Spell.Peer, ^peer, %Message{type: :subscribed}}
   end
 
-  @tag :integration
   test "multiple processes", %{peer: peer} do
     tasks = for topic <- [@topic, @topic, @topic] do
       Task.async(fn ->
@@ -37,7 +35,6 @@ defmodule Spell.SubscriberTest do
     end
   end
 
-  @tag :integration
   test "call_subscribe/2", %{peer: peer} do
     {:ok, subscription} = Subscriber.call_subscribe(peer, @topic)
     assert is_integer(subscription)

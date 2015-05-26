@@ -18,7 +18,6 @@ defmodule Spell.PubSubTest do
     {:ok, publisher: publisher, subscriber: subscriber}
   end
 
-  @tag :integration
   test "pubsub end to end", %{publisher: publisher, subscriber: subscriber} do
     {:ok, subscription} = Spell.call_subscribe(subscriber, @topic)
     assert {:ok, subscription} == Spell.call_subscribe(subscriber, @topic),

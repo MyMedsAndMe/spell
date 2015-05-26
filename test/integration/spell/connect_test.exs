@@ -3,7 +3,7 @@ defmodule Spell.ConnectTest do
 
   alias Spell.Transport.WebSocket
 
-  @serializer Spell.Serializer.JSON
+  @serializer Application.get_env(:spell, :serializer)
   @bad_host   "192.168.100.100"
   @bad_uri    "ws://" <> @bad_host
 

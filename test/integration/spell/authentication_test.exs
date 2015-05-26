@@ -7,7 +7,6 @@ defmodule Spell.AuthenticationTest do
   @secret  "alice-secret"
   @authentication [id: @auth_id, schemes: [{CRA, [secret: @secret]}]]
 
-  @tag :integration
   test "wampcra" do
     {:ok, peer} = Spell.connect(Crossbar.uri_auth(),
                                 realm: Crossbar.get_realm(),

@@ -59,7 +59,6 @@ defmodule Spell do
   alias Spell.Peer
   alias Spell.Message
   alias Spell.Transport
-  alias Spell.Serializer
   alias Spell.Role
 
   # Delegate commonly used role functions into `Spell`.
@@ -101,7 +100,6 @@ defmodule Spell do
 
   @supervisor_name __MODULE__.Supervisor
 
-  @default_serializer_module Serializer.JSON
   @default_transport_module  Transport.WebSocket
   @default_retries           5
   @default_retry_interval    1000
@@ -198,8 +196,7 @@ defmodule Spell do
       {:ok, role_options} ->
         session_options = Keyword.take(options, [:realm, :authentication])
         %{transport: Keyword.get(options, :transport),
-          serializer: Keyword.get(options, :serializer,
-                                  @default_serializer_module),
+          serializer: Keyword.get(options, :serializer, Application.get_env(:spell, :serializer)),
           owner: Keyword.get(options, :owner),
           role: %{options: Keyword.put_new(role_options, Role.Session,
                                            session_options),

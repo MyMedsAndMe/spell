@@ -11,7 +11,6 @@ defmodule Spell.SessionTest do
     {:ok, peer: peer}
   end
 
-  @tag :integration
   test "call_goodbye/1", %{peer: peer} do
     assert {:ok, %Message{type: :goodbye}} = Session.call_goodbye(peer)
   end

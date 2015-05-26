@@ -12,7 +12,8 @@ defmodule Spell.Mixfile do
      deps: deps,
      aliases: aliases,
      docs: docs,
-     preferred_cli_env: ["test.unit": :test,
+     preferred_cli_env: ["test.all": :test,
+                         "test.unit": :test,
                          "test.integration": :test,
                          "hex.docs": :doc,
                          docs: :doc]
@@ -62,8 +63,8 @@ defmodule Spell.Mixfile do
   end
 
   defp aliases do
-    ["test.unit":        "test --exclude integration --exclude pending",
-     "test.integration": "test --only integration --exclude pending",
+    ["test.all": ["test.unit", "test.integration"],
+     "test.unit":        "test test/unit",
      "spell.example.pubsub": "run examples/pubsub.exs",
      "spell.example.rpc":    "run examples/rpc.exs"]
   end

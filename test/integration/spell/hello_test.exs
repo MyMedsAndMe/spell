@@ -20,9 +20,8 @@ defmodule Spell.HelloTest do
   # Pending bcause this results in the lobbing of error messages. Need to
   # turn them off or capture stdin.
   @tag :pending
-  @tag :integration
   test "send_message/2", %{peer: peer} do
-    args = [Crossbar.realm, %{roles: %{publisher: %{}, subscriber: %{}}}]
+    args = [Crossbar.get_realm(), %{roles: %{publisher: %{}, subscriber: %{}}}]
     # This should kill the role
     assert :ok == Peer.send_message(peer, Message.new!(type: :hello, args: args))
     assert_receive {Peer, ^peer, {:error, _}}
