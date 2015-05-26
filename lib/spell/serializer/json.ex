@@ -7,6 +7,9 @@ defmodule Spell.Serializer.JSON do
   def transport_info(Spell.Transport.WebSocket) do
     %{name: "json", frame_type: :text}
   end
+  def transport_info(Spell.Transport.RawSocket) do
+    %{name: "json", serializer_id: 1}
+  end
 
   def decode(string) do
     case Poison.Parser.parse(string) do
