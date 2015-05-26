@@ -48,10 +48,14 @@ defmodule Spell.Transport.RawSocket do
 
   def init({host, port, owner, serializer_info}) do
     Logger.debug(fn -> "Connecting to #{host}:#{port}..." end)
-    {:ok, socket} = :gen_tcp.connect(String.to_char_list(host), 9000, [:binary, active: false])
-    {:ok, m} = handshake(socket, serializer_info)
-    :inet.setopts(socket, active: true)
-    {:ok, %{socket: socket, owner: owner, serializer_info: serializer_info}}
+    case :gen_tcp.connect(String.to_char_list(host), 9000, [:binary, active: false]) do
+      {:ok, socket} ->
+        {:ok, _m} = handshake(socket, serializer_info)
+        :inet.setopts(socket, active: true)
+        {:ok, %{socket: socket, owner: owner, serializer_info: serializer_info}}
+      {:error, reason} ->
+        {:stop, reason}
+    end
   end
 
   def handle_info({:tcp, socket, raw_message}, %{socket: socket} = state) do
@@ -76,7 +80,7 @@ defmodule Spell.Transport.RawSocket do
 
   # Private Functions
 
-  defp handshake(socket, %{serializer_id: serializer_id} = serializer_info) do
+  defp handshake(socket, %{serializer_id: serializer_id}) do
     :gen_tcp.send(socket, <<127,15::4,serializer_id::4,0,0>>)
     case :gen_tcp.recv(socket, 0) do
       {:ok, m} -> {:ok, m}
@@ -84,9 +88,9 @@ defmodule Spell.Transport.RawSocket do
     end
   end
 
-  defp handle_messages(<<>>, state), do: :ok
+  defp handle_messages(<<>>, _state), do: :ok
   defp handle_messages(raw_message, state) do
-    <<res::5,type::3,length::24,message::binary-size(length)>> <> remaining_messages = raw_message
+    <<_res::5,_type::3,length::24,message::binary-size(length)>> <> remaining_messages = raw_message
     :ok = send_to_owner(state.owner, {:message, message})
     handle_messages(remaining_messages, state)
   end

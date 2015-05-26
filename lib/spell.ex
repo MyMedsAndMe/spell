@@ -41,6 +41,7 @@ defmodule Spell do
   ### Transports
 
    * WebSocket: `Spell.Transport.WebSocket`
+   * RawSocket: `Spell.Transport.RawSocket`
 
   See `Spell.Transport` for how to create new transports.
 
@@ -58,7 +59,6 @@ defmodule Spell do
 
   alias Spell.Peer
   alias Spell.Message
-  alias Spell.Transport
   alias Spell.Role
 
   # Delegate commonly used role functions into `Spell`.
@@ -100,7 +100,6 @@ defmodule Spell do
 
   @supervisor_name __MODULE__.Supervisor
 
-  @default_transport_module  Transport.WebSocket
   @default_retries           5
   @default_retry_interval    1000
   @default_roles             [Role.Publisher,
@@ -135,7 +134,7 @@ defmodule Spell do
       when is_binary(uri) and is_list(options) do
     case parse_uri(uri) do
       {:ok, %{protocol: :ws, host: host, port: port, path: path}} ->
-        transport = %{module: @default_transport_module,
+        transport = %{module: Application.get_env(:spell, :transport),
                       options: [host: host, port: port, path: path]}
         case Keyword.put(options, :transport, transport) |> normalize_options() do
           {:ok, options} ->
@@ -217,7 +216,7 @@ defmodule Spell do
 
   defp normalize_options(%{transport: transport_options} = options)
       when is_list(transport_options) do
-    %{options | transport: %{module: @default_transport_module,
+    %{options | transport: %{module: Application.get_env(:spell, :transport),
                              options: transport_options}}
       |> normalize_options()
   end
