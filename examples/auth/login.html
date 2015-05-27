@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Framework Testing</title>
+    <link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body {
+        padding-bottom: 300px;
+      }
+      #log {
+        bottom: 0;
+        left: 0;
+        margin-bottom: 0;
+        position: fixed;
+        width: 100%;
+      }
+      #log .panel-heading {
+        border-radius: 0;
+      }
+      #log .panel-body {
+        height: 250px;
+        overflow: auto;
+      }
+      #log pre {
+        border: none;
+        background-color: transparent;
+        padding: 0;
+        margin: 0;
+      }
+    </style>
+    <!--[if lt IE 9]>
+      <script src="http://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="http://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <script>AUTOBAHN_DEBUG = true;</script>
+    <script src="http://autobahn.s3.amazonaws.com/autobahnjs/latest/autobahn.min.jgz"></script>
+    <div class="container">
+      <h1>WAMP - RPC example</h1>
+      <p>
+        This example will provide a very trivial authentication form. it provide an RPC call to the elixir servise that
+        checks if the username and password inserted are correct.<br/>
+        The remote procedure is implemented using Spell and for the sake of simplicity we hard-coded the logic to allow the login only for <code>username</code> = <code>marco</code> and <code>password</code> = <code>pass</code>.<br/>
+      </p>
+      <p><small><i class="glyphicon glyphicon-heart"></i> from MyMedsandMe team</small></p>
+
+      <form id="form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" class="form-control" name="username" placeholder="username"/>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="text" id="password" class="form-control" name="password" placeholder="password"/>
+        </div>
+        <div class="form-group">
+          <input type="submit" class="btn btn-primary"/>
+        </div>
+      </form>
+
+      <div class="panel panel-default" id="log">
+        <div class="panel-heading">
+          <h2 class="panel-title">Log</h2>
+        </div>
+        <div class="panel-body">
+          <pre></pre>
+        </div>
+      </div>
+    </div>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+    <script>
+      function log(msg) {
+        document.querySelector('#log pre').textContent += msg + '\n';
+      }
+
+      var wsuri;
+
+      var origin = document.location.protocol + "//" + document.location.hostname + (document.location.port ? ':' + document.location.port: '');
+      if (origin  == "file://") {
+        wsuri = "ws://127.0.0.1:8080/ws";
+      } else {
+        wsuri = (document.location.protocol === "http:" ? "ws:" : "wss:") + "//" +
+                    document.location.host + "/ws";
+      }
+
+      // the WAMP connection to the Router
+      var connection = new autobahn.Connection({
+        url: wsuri,
+        realm: "realm1"
+      });
+
+      connection.onopen = function (session, details) {
+        $('#form').submit(function (e) {
+          e.preventDefault();
+          var username = $('#username').val();
+          var password = $('#password').val();
+
+          var data = JSON.stringify({
+            username: username,
+            password: password
+          });
+
+          log('SENDING: ' + data + " to topic 'api.mymedsandme.auth'");
+          session.call('api.mymedsandme.auth', [data]).then(
+            // RPC success callback
+            function (data) {
+              if(data.kwargs.error){
+                log("RECEIVING: " + data.kwargs.error);
+              }
+              if(data.kwargs.ok){
+                log("RECEIVING: " + data.kwargs.ok);
+              }
+            },
+            // RPC error callback
+            function (error) {
+              log("login error");
+            }
+          );
+        });
+      }
+
+      connection.onclose = function (reason, details) {
+        console.log("Connection lost: " + reason);
+        if (t1) {
+         clearInterval(t1);
+         t1 = null;
+        }
+        if (t2) {
+         clearInterval(t2);
+         t2 = null;
+        }
+      }
+
+      // open connection
+      connection.open();
+    </script>
+  </body>
+</html>
