@@ -47,10 +47,10 @@ defmodule RPC do
       # `Spell.cast_call` performs an asyncronous call to the remote procedure, the result will 
       # be intercepted and parsed by the block `Spell.receive_result`
       {:ok, call_id} = Spell.cast_call(state.caller, state.procedure, state.params)
-      Logger.info("<Caller> send params: #{inspect(state.params)}")
+      Logger.info("<Caller: #{inspect(state.caller)}> send params: #{inspect(state.params)}")
       
       case Spell.receive_result(state.caller, call_id) do
-        {:ok, result} -> IO.inspect handle_result(result)
+        {:ok, result} -> IO.inspect handle_result(state, result)
         {:error, reason} -> {:error, reason}
       end
 
@@ -58,8 +58,8 @@ defmodule RPC do
       loop(state)
     end
 
-    def handle_result([_result_id, _options, _arguments, %{"result" => res}]) do
-      Logger.info("<Caller> received result: #{inspect(res)}")
+    def handle_result(state, [_result_id, _options, _arguments, %{"result" => res}]) do
+      Logger.info("<Caller: #{inspect(state.caller)}> received result: #{inspect(res)}")
     end
   end
 
@@ -73,7 +73,7 @@ defmodule RPC do
     iex> Callee.start_link("com.spell.rpc.sum")
     """
     require Logger
-    defstruct [:callee, :procedure, timeout: 1000]
+    defstruct [:callee, :reg_id, timeout: 1000]
 
     # Public Functions
 
@@ -91,18 +91,15 @@ defmodule RPC do
 
       # `Spell.cast_register` receive the callee and the procedure where it
       # has to be registered
-      {:ok, _register_id} = Spell.cast_register(callee, procedure)
+      {:ok, _reg_id} = Spell.cast_register(callee, procedure)
 
-      %__MODULE__{callee: callee,
-                  procedure: procedure}
-        |> struct(options)
-        |> loop()
+      %__MODULE__{callee: callee} |> struct(options) |> loop()
     end
 
     defp loop(state) do
       receive do
         :stop -> :ok
-        {Spell.Peer, _pid, message} -> handle_message(state, message)
+        {Spell.Peer, _pid, message} -> state = handle_message(state, message)
         _ -> {:error, :wrong_message}
       after
         state.timeout -> {:error, :timeout}
@@ -110,19 +107,16 @@ defmodule RPC do
       loop(state)
     end
 
-    defp handle_message(_state, %Spell.Message{args: _args, code: _code, type: :registered}) do
-      Logger.info("<Callee> registered")
+    defp handle_message(state, %Spell.Message{args: [_request, reg_id], type: :registered}) do
+      Logger.info("<Callee: #{inspect(state.callee)}> registered")
+      %{state | reg_id: reg_id}
     end
 
-    defp handle_message(state, %Spell.Message{args: [request, _reg_id, _msg, params], code: _code, type: :invocation}) do
-      Logger.info("<Callee> received #{inspect(params)} to sum")
-      Spell.cast_yield(state.callee, request, [arguments_kw: %{result: sum(params, 0)}])
+    defp handle_message((%{callee: callee, reg_id: reg_id}) = state, %Spell.Message{args: [request, reg_id, _msg, params], type: :invocation}) do
+      Logger.info("<Callee: #{inspect(callee)}> received #{inspect(params)} on #{reg_id}")
+      Spell.cast_yield(callee, request, [arguments_kw: %{result: Math.sum(params, 0)}])
+      state
     end
-
-    def sum([], acc), do: acc
-    def sum(int, acc) when is_integer(int), do: sum([int], acc)
-    def sum([h | t] = list, acc) when is_list(list) and is_integer(h), do: sum(t, acc + h)
-    def sum([h | t] = list, acc) when is_list(list), do: sum(t, acc + String.to_integer(h))
   end
 
   # Public Interface
@@ -136,7 +130,16 @@ defmodule RPC do
     realm = Keyword.get(options, :realm, Crossbar.get_realm())
     Spell.connect(uri, realm: realm, roles: roles)
   end
+end
 
+defmodule Math do
+  @doc """
+  Module to provide some simple mathematic operation
+  """
+  def sum([], acc), do: acc
+  def sum(int, acc) when is_integer(int), do: sum([int], acc)
+  def sum([h | t] = list, acc) when is_list(list) and is_integer(h), do: sum(t, acc + h)
+  def sum([h | t] = list, acc) when is_list(list), do: sum(t, acc + String.to_integer(h))
 end
 
 alias RPC.Callee
@@ -148,14 +151,13 @@ Logger.info("Starting the Crossbar.io test server...")
 # Start the crossbar testing server
 {:ok, _pid} = Crossbar.start()
 
-procedure = "com.spell.rpc.sum"
+procedure_sum = "com.spell.rpc.sum"
 
 # Register callee to the WAMP router
-{:ok, _callee} = Callee.start_link(procedure)
+{:ok, _callee} = Callee.start_link(procedure_sum)
 
 # Call the remote procedure passing the agruments
-{:ok, _caller} = Caller.start_link(procedure, [arguments: [1, 2, 3]])
-
+{:ok, _caller} = Caller.start_link(procedure_sum, [arguments: [1, 2, 3]])
 :timer.sleep(10000)
 
 Logger.info("DONE... Stopping Crossbar.io server")
