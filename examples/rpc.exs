@@ -16,7 +16,7 @@ defmodule RPC do
     This Caller need to be initialised with the `procedure` where the Callee is subscribed 
     and the `params` used within the remote procedure
 
-    iex> Caller.start_link("com.spell.rpc.sum", [arguments: [1, 2, 3]])
+    iex> Caller.start_link("com.spell.math.sum", [arguments: [1, 2, 3]])
     """
     require Logger
     defstruct [:caller, :procedure, :params, interval: 1500]
@@ -64,58 +64,65 @@ defmodule RPC do
   end
 
   defmodule Callee do
+    use GenServer
     @moduledoc """
     The callee need to be registered to the WAMP Dealer in order to be accesseble and expose
-    the procedure. Once it is registered it will wait an invocation from the Dealer and yield 
-    the result back. in this case it will receive an array of integer `[1, 2, 3]` and return
-    the sum of them `6`
+    the procedure. 
+    
+    iex> Callee.start_link()
 
-    iex> Callee.start_link("com.spell.rpc.sum")
+    Once it is registered it will wait an invocation from the Dealer and yield 
+    the result back. in this case we have two function exposed:
+
+    - `spell.math.sum`
+    - `spell.math.multiply`
     """
+
+    @doc """
+    Function that return the map of the functions exposed to the remote procedure
+    """
+    def function_list do
+      %{ 
+        "spell.math.sum" => &Math.sum/1,
+        "spell.math.multiply" => &Math.multiply/1
+      }
+    end
+
     require Logger
-    defstruct [:callee, :reg_id, timeout: 1000]
+    defstruct [:callee, register: %{}, timeout: 1000]
 
     # Public Functions
 
     @doc """
     Start the callee with the passed procedure.
     """
-    def start_link(topics, options \\ []) do
-      {:ok, spawn_link(fn -> init(topics, options) end)}
+    def start_link(options \\ []) do
+      GenServer.start_link(__MODULE__, [options])
     end
 
     # Private Functions
 
-    defp init(procedure, options) do
+    def init(options) do
       {:ok, callee} = RPC.new_peer([Spell.Role.Callee], options)
 
       # `Spell.cast_register` receive the callee and the procedure where it
       # has to be registered
-      {:ok, _reg_id} = Spell.cast_register(callee, procedure)
+      state = %__MODULE__{callee: callee}
 
-      %__MODULE__{callee: callee} |> struct(options) |> loop()
-    end
-
-    defp loop(state) do
-      receive do
-        :stop -> :ok
-        {Spell.Peer, _pid, message} -> state = handle_message(state, message)
-        _ -> {:error, :wrong_message}
-      after
-        state.timeout -> {:error, :timeout}
+      new_register = for {proc, function} <- function_list do
+        {:ok, reg_id} = Spell.call_register(callee, proc)
+        {reg_id, function}
       end
-      loop(state)
+      |> Enum.into %{}
+
+      state = Map.put(state, :register, new_register)
+      {:ok, state}
     end
 
-    defp handle_message(state, %Spell.Message{args: [_request, reg_id], type: :registered}) do
-      Logger.info("<Callee: #{inspect(state.callee)}> registered")
-      %{state | reg_id: reg_id}
-    end
-
-    defp handle_message((%{callee: callee, reg_id: reg_id}) = state, %Spell.Message{args: [request, reg_id, _msg, params], type: :invocation}) do
-      Logger.info("<Callee: #{inspect(callee)}> received #{inspect(params)} on #{reg_id}")
-      Spell.cast_yield(callee, request, [arguments_kw: %{result: Math.sum(params, 0)}])
-      state
+    def handle_info({Spell.Peer, pid, %Spell.Message{args: [request, reg_id, _msg, params], type: :invocation}}, (%{callee: callee}) = state) do
+      rpc = state.register[reg_id]
+      Spell.cast_yield(callee, request, [arguments_kw: %{result: rpc.(params)}])
+      {:noreply, state}
     end
   end
 
@@ -134,12 +141,19 @@ end
 
 defmodule Math do
   @doc """
-  Module to provide some simple mathematic operation
+  Module to provide some simple mathematic operations
   """
+  def sum(list), do: sum(list, 0)
   def sum([], acc), do: acc
   def sum(int, acc) when is_integer(int), do: sum([int], acc)
   def sum([h | t] = list, acc) when is_list(list) and is_integer(h), do: sum(t, acc + h)
   def sum([h | t] = list, acc) when is_list(list), do: sum(t, acc + String.to_integer(h))
+
+  def multiply(list), do: multiply(list, 1)
+  def multiply([], acc), do: acc
+  def multiply(int, acc) when is_integer(int), do: multiply([int], acc)
+  def multiply([h | t] = list, acc) when is_list(list) and is_integer(h), do: multiply(t, acc * h)
+  def multiply([h | t] = list, acc) when is_list(list), do: multiply(t, acc * String.to_integer(h))
 end
 
 alias RPC.Callee
@@ -151,13 +165,12 @@ Logger.info("Starting the Crossbar.io test server...")
 # Start the crossbar testing server
 {:ok, _pid} = Crossbar.start()
 
-procedure_sum = "com.spell.rpc.sum"
-
 # Register callee to the WAMP router
-{:ok, _callee} = Callee.start_link(procedure_sum)
+{:ok, _callee} = Callee.start_link()
 
 # Call the remote procedure passing the agruments
-{:ok, _caller} = Caller.start_link(procedure_sum, [arguments: [1, 2, 3]])
+{:ok, _caller} = Caller.start_link("spell.math.sum", [arguments: [1, 2, 3]])
+{:ok, _caller} = Caller.start_link("spell.math.multiply", [arguments: [10, 4]])
 :timer.sleep(10000)
 
 Logger.info("DONE... Stopping Crossbar.io server")
