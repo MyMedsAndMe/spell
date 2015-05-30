@@ -94,10 +94,16 @@ defmodule Crossbar do
   The default value of `8080` can be overrode using the environment
   variable `CROSSBAR_PORT`.
   """
-  @spec get_port(:websocket) :: :inet.port
+  @spec get_port(:websocket | :raw_socket) :: :inet.port
   def get_port(:websocket) do
-    case System.get_env("CROSSBAR_PORT") do
+    case System.get_env("CROSSBAR_PORT_WS") do
       nil -> 8080
+      port when is_binary(port) -> String.to_integer(port)
+    end
+  end
+  def get_port(:raw_socket) do
+    case System.get_env("CROSSBAR_PORT_RS") do
+      nil -> 9000
       port when is_binary(port) -> String.to_integer(port)
     end
   end
@@ -111,15 +117,26 @@ defmodule Crossbar do
   @doc """
   Get the crossbar resource path.
   """
-  @spec get_path(:websocket) :: String.t
+  @spec get_path(:websocket | :raw_socket) :: String.t
   def get_path(:websocket), do: "/ws"
+  def get_path(:raw_socket), do: ""
 
   @doc """
   ExUnit setup helper function.
   """
-  def get_config(listener \\ :websocket) do
+  def get_config() do
+    case Application.get_env(:spell, :transport) do
+      Spell.Transport.RawSocket -> :raw_socket
+      _ -> :websocket
+    end
+    |> get_config
+  end
+  def get_config(listener) do
     [host: get_host(),
+     websocket_port: get_port(:websocket),
+     raw_socket_port: get_port(:raw_socket),
      port: get_port(listener),
+     websocket_path: get_path(:websocket),
      path: get_path(listener),
      realm: get_realm()]
   end
@@ -139,7 +156,10 @@ defmodule Crossbar do
   """
   @spec uri_auth(Keyword.t) :: String.t
   def uri_auth(options \\ get_config()) do
-    uri(options) <> "_auth"
+     case Application.get_env(:spell, :transport) do
+      Spell.Transport.RawSocket -> uri(Keyword.update!(options, :port, &(&1 + 1)))
+      _ -> uri(options) <> "_auth"
+    end
   end
 
   @doc """

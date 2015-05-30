@@ -48,7 +48,7 @@ defmodule Spell.Transport.RawSocket do
 
   def init({host, port, owner, serializer_info}) do
     Logger.debug(fn -> "Connecting to #{host}:#{port}..." end)
-    case :gen_tcp.connect(String.to_char_list(host), 9000, [:binary, active: false]) do
+    case :gen_tcp.connect(String.to_char_list(host), port, [:binary, active: false]) do
       {:ok, socket} ->
         {:ok, _m} = handshake(socket, serializer_info)
         :inet.setopts(socket, active: true)
