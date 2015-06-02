@@ -29,11 +29,11 @@ defmodule Spell.Transport.RawSocket do
   @spec connect(module, options) :: {:ok, pid} | {:error, any}
   def connect(serializer, options) when is_list(options) do
     case get_all(options, @options_spec) do
-      {:ok, [host, port]}
-          when is_binary(host) and is_integer(port) ->
-
+      {:ok, [host, port]} when is_binary(host) and is_integer(port) ->
         serializer_info = serializer.transport_info(__MODULE__)
-        GenServer.start_link(__MODULE__, {host, port, self(), serializer_info})
+        timeout = Keyword.get(options, :timeout, 6000)
+
+        :proc_lib.start_link(__MODULE__, :init, [{host, port, self(), serializer_info, timeout}])
       {:error, reason} ->
         {:error, reason}
     end
@@ -46,15 +46,16 @@ defmodule Spell.Transport.RawSocket do
 
   # GenServer Callbacks
 
-  def init({host, port, owner, serializer_info}) do
+  def init({host, port, owner, serializer_info, timeout}) do
     Logger.debug(fn -> "Connecting to #{host}:#{port}..." end)
-    case :gen_tcp.connect(String.to_char_list(host), port, [:binary, active: false]) do
+    case :gen_tcp.connect(String.to_char_list(host), port, [:binary, active: false], timeout) do
       {:ok, socket} ->
         {:ok, _m} = handshake(socket, serializer_info)
         :inet.setopts(socket, active: true)
-        {:ok, %{socket: socket, owner: owner, serializer_info: serializer_info}}
+        :proc_lib.init_ack({:ok, self})
+        :gen_server.enter_loop(__MODULE__, [], %{socket: socket, owner: owner, serializer_info: serializer_info})
       {:error, reason} ->
-        {:stop, reason}
+        :proc_lib.init_ack({:error, reason})
     end
   end
 
