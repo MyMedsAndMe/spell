@@ -70,6 +70,12 @@ defmodule Spell.Transport.RawSocket do
     {:noreply, state}
   end
 
+  def handle_info({:ping, raw_message}, %__MODULE__{socket: socket} = state) do
+    Logger.debug(fn -> "Sending pong over socket: #{inspect(raw_message)}" end)
+    :gen_tcp.send(socket, frame_message(raw_message, :pong))
+    {:noreply, state}
+  end
+
   def handle_info({:tcp_closed, socket}, %__MODULE__{socket: socket} = state) do
     Logger.debug(fn -> "Socket connection terminating" end)
     :ok = send_to_owner(state.owner, {:terminating, socket})
@@ -128,12 +134,18 @@ defmodule Spell.Transport.RawSocket do
     :proc_lib.init_ack({:error, reason})
   end
 
-  # TODO: handle ping messages
   defp handle_messages(<<>>, _state), do: :ok
   defp handle_messages(raw_message, state) do
-    {message, remaining_messages} = extract_message(raw_message)
-    :ok = send_to_owner(state.owner, {:message, message})
+    {message, type, remaining_messages} = extract_message(raw_message)
+    respond_to(message, type, state)
     handle_messages(remaining_messages, state)
+  end
+
+  defp respond_to(message, :wamp, state) do
+    :ok = send_to_owner(state.owner, {:message, message})
+  end
+  defp respond_to(message, :ping, state) do
+    send(self, {:ping, message})
   end
 
   # WAMP message frame format: RRRR RTTT LLLL LLLL LLLL LLLL LLLL LLLL
@@ -144,13 +156,20 @@ defmodule Spell.Transport.RawSocket do
     # 2: PONG
     # 3-7: reserved
   # LLLL LLLL LLLL LLLL LLLL LLLL = length of the serialized WAMP message
-  defp extract_message(<<_res::5,_type::3,length::24,message::binary-size(length)>> <> remaining_messages) do
-    {message, remaining_messages}
+  defp extract_message(<<_res::5,type_id::3,length::24,message::binary-size(length)>> <> remaining_messages) do
+    {message, message_type(type_id), remaining_messages}
   end
 
-  defp frame_message(raw_message) do
-    <<0::5,0::3,byte_size(raw_message)::24>> <> raw_message
+  defp frame_message(raw_message, type \\ :wamp) do
+    <<0::5,message_type_id(type)::3,byte_size(raw_message)::24>> <> raw_message
   end
+
+  defp message_type(0), do: :wamp
+  defp message_type(1), do: :ping
+  defp message_type(2), do: :pong
+  defp message_type_id(:wamp), do: 0
+  defp message_type_id(:ping), do: 1
+  defp message_type_id(:pong), do: 2
 
   @spec send_to_owner(pid, any) :: :ok
   defp send_to_owner(owner, message) do
