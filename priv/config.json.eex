@@ -69,7 +69,7 @@
                     "type": "rawsocket",
                     "endpoint": {
                       "type": "tcp",
-                      "port": <%= @raw_socket_port + 1 %>
+                      "port": <%= @raw_socket_auth_port %>
                     },
                     "auth": {
                        "wampcra": {
