@@ -1,6 +1,7 @@
 defmodule Spell.Transport.RawSocket do
   @moduledoc """
   The `Spell.Transport.RawSocket` module implements a raw socket transport.
+  https://github.com/tavendo/WAMP/blob/master/spec/advanced.md#rawsocket-transport
   """
   @behaviour Spell.Transport
   require Logger
@@ -65,8 +66,7 @@ defmodule Spell.Transport.RawSocket do
 
   def handle_info({:send, raw_message}, %__MODULE__{socket: socket} = state) do
     Logger.debug(fn -> "Sending message over socket: #{inspect(raw_message)}" end)
-    frame = <<0::5,0::3,byte_size(raw_message)::24>>
-    :gen_tcp.send(socket, frame <> raw_message)
+    :gen_tcp.send(socket, frame_message(raw_message))
     {:noreply, state}
   end
 
@@ -79,17 +79,47 @@ defmodule Spell.Transport.RawSocket do
   # Private Functions
 
   defp handshake(%__MODULE__{socket: socket, serializer_id: serializer_id, max_length: max_length} = state) do
-    :gen_tcp.send(socket, <<127,max_length::4,serializer_id::4,0,0>>)
+    :gen_tcp.send(socket, handshake_frame(max_length, serializer_id))
     :gen_tcp.recv(socket, 0)
     |> process_handshake_response(state)
   end
 
+  # WAMP handshake frame format: 0111 1111 LLLL SSSS RRRR RRRR RRRR RRRR
+  # LLLL = value is used by the Client to signal the maximum message length of messages it is willing to receive.
+    # 0: 2**9 octets
+    # 1: 2**10 octets
+    # ...
+    # 15: 2**24 octets
+  # SSSS = used by the Client to request a specific serializer to be used
+    # 0: illegal
+    # 1: JSON
+    # 2: MsgPack
+    # 3 - 15: reserved for future serializers
+  # RRRR RRRR RRRR RRRR = reserved and MUST be all zeros for now
+  defp handshake_frame(max_length, serializer_id) do
+    <<127,max_length::4,serializer_id::4,0,0>>
+  end
+
+  # WAMP successful handshake response format: 0111 1111 LLLL SSSS RRRR RRRR RRRR RRRR
+  # LLLL = limit on the length of messages sent by the Client
+  # SSSS = echo the serializer value requested by the Client
+  # RRRR RRRR RRRR RRRR = reserved and MUST be all zeros for now
   defp process_handshake_response({:ok, <<127,max_length::4,ser_id::4,0,0>>}, %__MODULE__{serializer_id: ser_id} = state) do
     :inet.setopts(state.socket, active: true)
     :proc_lib.init_ack({:ok, self})
     :gen_server.enter_loop(__MODULE__, [], %{state | router_max_length: max_length})
   end
 
+  # WAMP error handshake response format: 0111 1111 EEEE 0000 RRRR RRRR RRRR RRRR
+  # EEEE = encode the error:
+    # 0: illegal (must not be used)
+    # 1: serializer unsupported
+    # 2: maximum message length unacceptable
+    # 3: use of reserved bits (unsupported feature)
+    # 4: maximum connection count reached
+    # 5 - 15: reserved for future errors
+  # RRRR RRRR RRRR RRRR = reserved and MUST be all zeros for now
+  # TODO: return error explanation instead of code
   defp process_handshake_response({:ok, <<127,error_code::4,0::4,0,0>>}, _state) do
     :proc_lib.init_ack({:error, error_code})
   end
@@ -98,11 +128,28 @@ defmodule Spell.Transport.RawSocket do
     :proc_lib.init_ack({:error, reason})
   end
 
+  # TODO: handle ping messages
   defp handle_messages(<<>>, _state), do: :ok
   defp handle_messages(raw_message, state) do
-    <<_res::5,_type::3,length::24,message::binary-size(length)>> <> remaining_messages = raw_message
+    {message, remaining_messages} = extract_message(raw_message)
     :ok = send_to_owner(state.owner, {:message, message})
     handle_messages(remaining_messages, state)
+  end
+
+  # WAMP message frame format: RRRR RTTT LLLL LLLL LLLL LLLL LLLL LLLL
+  # RRRR R = reserved and MUST be all zeros for now
+  # TTT = encode the type of the transport message
+    # 0: regular WAMP message
+    # 1: PING
+    # 2: PONG
+    # 3-7: reserved
+  # LLLL LLLL LLLL LLLL LLLL LLLL = length of the serialized WAMP message
+  defp extract_message(<<_res::5,_type::3,length::24,message::binary-size(length)>> <> remaining_messages) do
+    {message, remaining_messages}
+  end
+
+  defp frame_message(raw_message) do
+    <<0::5,0::3,byte_size(raw_message)::24>> <> raw_message
   end
 
   @spec send_to_owner(pid, any) :: :ok
