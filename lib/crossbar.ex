@@ -310,7 +310,7 @@ defmodule Crossbar do
   end
 
   defp uri_for(:raw_socket, options) do
-    "ws://#{options[:host]}:#{options[:port]}"
+    "raw_socket://#{options[:host]}:#{options[:port]}"
   end
 
   defp auth_uri_for(:websocket, options) do

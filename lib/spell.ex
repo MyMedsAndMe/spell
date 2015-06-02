@@ -134,17 +134,26 @@ defmodule Spell do
       when is_binary(uri) and is_list(options) do
     case parse_uri(uri) do
       {:ok, %{protocol: :ws, host: host, port: port, path: path}} ->
-        transport = %{module: Application.get_env(:spell, :transport),
+        transport = %{module: Spell.Transport.WebSocket,
                       options: [host: host, port: port, path: path]}
-        case Keyword.put(options, :transport, transport) |> normalize_options() do
-          {:ok, options} ->
-            {:ok, peer} = Peer.add(options)
-            case Role.Session.await_welcome(peer) do
-              {:ok, _welcome}  -> {:ok, peer}
-              {:error, reason} -> {:error, reason}
-            end
+        init_peer(options, transport)
+      {:ok, %{protocol: :raw_socket, host: host, port: port}} ->
+        transport = %{module: Spell.Transport.RawSocket,
+                      options: [host: host, port: port]}
+        init_peer(options, transport)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp init_peer(options, transport_options) do
+    case Keyword.put(options, :transport, transport_options) |> normalize_options() do
+      {:ok, options} ->
+        {:ok, peer} = Peer.add(options)
+        case Role.Session.await_welcome(peer) do
+          {:ok, _welcome}  -> {:ok, peer}
           {:error, reason} -> {:error, reason}
         end
+      {:error, reason} -> {:error, reason}
     end
   end
 
