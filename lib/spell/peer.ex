@@ -274,7 +274,7 @@ defmodule Spell.Peer do
     end
   end
 
-  def handle_info({module, pid, {:terminating, {:error, :badframe, reason}}},
+  def handle_info({module, pid, {:terminating, reason}},
                   %{transport: %{module: module, pid: pid}} = state) do
     # NOTE: the transport closed
     send_to_owner(state, {:error, {:transport, reason}})

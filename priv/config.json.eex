@@ -29,17 +29,17 @@
                     "type": "web",
                     "endpoint": {
                         "type": "tcp",
-                        "port": <%= @port %>
+                        "port": <%= @websocket_port %>
                     },
                     "paths": {
                         "/": {
                             "type": "static",
                             "directory": ".."
                         },
-                        "<%= String.replace(@path, ~r"^/", "") %>": {
+                        "<%= String.replace(@websocket_path, ~r"^/", "") %>": {
                             "type": "websocket"
                         },
-                        "<%= String.replace(@path, ~r"^/", "") <> "_auth" %>": {
+                        "<%= String.replace(@websocket_path, ~r"^/", "") <> "_auth" %>": {
                             "type": "websocket",
                             "auth": {
                                 "wampcra": {
@@ -56,6 +56,34 @@
                                 }
                             }
                         }
+                    }
+                },
+                {
+                    "type": "rawsocket",
+                    "endpoint": {
+                      "type": "tcp",
+                      "port": <%= @raw_socket_port %>
+                    }
+                },
+                {
+                    "type": "rawsocket",
+                    "endpoint": {
+                      "type": "tcp",
+                      "port": <%= @raw_socket_auth_port %>
+                    },
+                    "auth": {
+                       "wampcra": {
+                           "type": "static",
+                           "users": {
+                               "alice": {
+                                   "secret": "MOv/dV4AF/yMxvz38oMjzA==",
+                                   "role": "anonymous",
+                                   "salt": "salt123",
+                                   "iterations": 100,
+                                   "keylen": 16
+                               }
+                           }
+                       }
                     }
                 }
             ]

@@ -33,9 +33,6 @@ defmodule Crossbar do
 
   @timeout       1000
 
-  @crossbar_host "localhost"
-  @crossbar_port 8080
-
   @crossbar_exec "/usr/local/bin/crossbar"
   @crossbar_path Application.app_dir(:spell, ".crossbar")
   @crossbar_args ["--cbdir", @crossbar_path]
@@ -91,13 +88,33 @@ defmodule Crossbar do
   @doc """
   Return the port which the crossbar transport is listening on.
 
-  The default value of `8080` can be overrode using the environment
-  variable `CROSSBAR_PORT`.
+  The default value of `8080` for websocket and `9000` for raw_socket can be
+  overrode using the environment variables `CROSSBAR_PORT_WS` and `CROSSBAR_PORT_RS`.
   """
-  @spec get_port(:websocket) :: :inet.port
+  @spec get_port(:websocket | :raw_socket) :: :inet.port
   def get_port(:websocket) do
-    case System.get_env("CROSSBAR_PORT") do
+    case System.get_env("CROSSBAR_PORT_WS") do
       nil -> 8080
+      port when is_binary(port) -> String.to_integer(port)
+    end
+  end
+  def get_port(:raw_socket) do
+    case System.get_env("CROSSBAR_PORT_RS") do
+      nil -> 9000
+      port when is_binary(port) -> String.to_integer(port)
+    end
+  end
+
+  @doc """
+  Return the port which the crossbar raw_socket auth is listening on.
+
+  The default value of `9001` for raw_socket can be
+  overrode using the environment variable `CROSSBAR_AUTH_PORT_RS`.
+  """
+  @spec get_port(:raw_socket) :: :inet.port
+  def get_auth_port(:raw_socket) do
+    case System.get_env("CROSSBAR_AUTH_PORT_RS") do
+      nil -> 9001
       port when is_binary(port) -> String.to_integer(port)
     end
   end
@@ -111,25 +128,27 @@ defmodule Crossbar do
   @doc """
   Get the crossbar resource path.
   """
-  @spec get_path(:websocket) :: String.t
+  @spec get_path(:websocket | :raw_socket) :: String.t
   def get_path(:websocket), do: "/ws"
+  def get_path(:raw_socket), do: ""
 
   @doc """
-  ExUnit setup helper function.
+  Get the crossbar config.
   """
-  def get_config(listener \\ :websocket) do
+  @spec get_config(:websocket | :raw_socket) :: Keyword.t
+  def get_config(transport \\ app_transport) do
     [host: get_host(),
-     port: get_port(listener),
-     path: get_path(listener),
+     port: get_port(transport),
+     path: get_path(transport),
      realm: get_realm()]
   end
 
   @doc """
   Get the config as a uri.
   """
-  @spec uri(Keyword.t) :: String.t
-  def uri(options \\ get_config()) do
-    "ws://#{options[:host]}:#{options[:port]}#{options[:path]}"
+  @spec uri(Keyword.t, :websocket | :raw_socket) :: String.t
+  def uri(options \\ get_config(), transport \\ app_transport) do
+    uri_for(transport, options)
   end
 
   @doc """
@@ -137,9 +156,9 @@ defmodule Crossbar do
 
   TODO: support this as part of templating out the config file.
   """
-  @spec uri_auth(Keyword.t) :: String.t
-  def uri_auth(options \\ get_config()) do
-    uri(options) <> "_auth"
+  @spec uri_auth(Keyword.t, :websocket | :raw_socket) :: String.t
+  def uri_auth(options \\ get_config(), transport \\ app_transport) do
+    auth_uri_for(transport, options)
   end
 
   @doc """
@@ -163,7 +182,7 @@ defmodule Crossbar do
     {path, config} = Dict.pop(config, :crossbar_path, @crossbar_path)
     case File.mkdir_p(path) do
       :ok ->
-        json_config = Dict.merge(get_config(), config)
+        json_config = Dict.merge(get_all_config(), config)
           |> template_config()
         Path.join(path, "config.json")
           |> File.write(json_config)
@@ -215,8 +234,7 @@ defmodule Crossbar do
     {:ok, state}
   end
 
-  def handle_info({Spell.Transport.WebSocket, _pid,
-                   {:terminating, {:remote, :closed}}}, _state) do
+  def handle_info({_transport, _pid, {:terminating, {:remote, :closed}}}, _state) do
     # Remove the handler when receiving a remote closed message
     # Logger.debug(fn -> "Crossbar out: #{inspect(message)}" end)
     :remove_handler
@@ -268,5 +286,37 @@ defmodule Crossbar do
      :binary,
      :use_stdio,
      :stderr_to_stdout]
+  end
+
+  defp app_transport do
+    case Application.get_env(:spell, :transport) do
+      Spell.Transport.RawSocket -> :raw_socket
+      _ -> :websocket
+    end
+  end
+
+  defp get_all_config do
+    [host: get_host(),
+     websocket_port: get_port(:websocket),
+     raw_socket_port: get_port(:raw_socket),
+     raw_socket_auth_port: get_auth_port(:raw_socket),
+     websocket_path: get_path(:websocket),
+     realm: get_realm()]
+  end
+
+  defp uri_for(:websocket, options) do
+    "ws://#{options[:host]}:#{options[:port]}#{options[:path]}"
+  end
+
+  defp uri_for(:raw_socket, options) do
+    "raw_socket://#{options[:host]}:#{options[:port]}"
+  end
+
+  defp auth_uri_for(:websocket, options) do
+    uri_for(:websocket, options) <> "_auth"
+  end
+
+  defp auth_uri_for(:raw_socket, options) do
+    uri_for(:raw_socket, Keyword.put(options, :port, get_auth_port(:raw_socket)))
   end
 end

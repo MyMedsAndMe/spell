@@ -1,32 +1,26 @@
 defmodule Spell.ConnectTest do
   use ExUnit.Case
 
-  alias Spell.Transport.WebSocket
-
+  @transport  Application.get_env(:spell, :transport)
   @serializer Application.get_env(:spell, :serializer)
   @bad_host   "192.168.100.100"
   @bad_uri    "ws://" <> @bad_host
 
   setup do: {:ok, Crossbar.get_config()}
 
-  test "connecting the websocket", %{host: host, port: port} do
+  test "connecting the transport", %{host: host, port: port, path: path} do
     assert {:error, {:missing, keys}} =
-      WebSocket.connect(@serializer, [])
+      @transport.connect(@serializer, [])
     assert :host in keys
 
     {:ok, transport} =
-      WebSocket.connect(@serializer, host: host, port: port, path: "/ws")
+      @transport.connect(@serializer, host: host, port: port, path: path)
     assert transport
   end
 
-  test "connecting with a bad path", %{host: host, port: port} do
-    assert {:error, {404, _}} =
-      WebSocket.connect(@serializer, host: host, port: port)
-  end
-
-  test "connecting the websocket to a bad host" do
+  test "connecting the transport to a bad host" do
     assert {:error, reason} =
-      WebSocket.connect(@serializer, host: @bad_host, port: 80)
+      @transport.connect(@serializer, host: @bad_host, port: 80)
     assert reason in [:timeout, :enetunreach],
       "the reason is timeout if the network is available, enetunreach if not"
   end

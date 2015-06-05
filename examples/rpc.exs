@@ -1,5 +1,5 @@
 # This example want to show how to call a Remote Procedure.
-# Inside the module RPC we have the module Callee where the procedure 
+# Inside the module RPC we have the module Callee where the procedure
 # is defined and the module Calleer who will call the procedure.
 #
 # Run this script from the Spell root with
@@ -13,7 +13,7 @@ defmodule RPC do
 
   defmodule Caller do
     @moduledoc """
-    This Caller need to be initialised with the `procedure` where the Callee is subscribed 
+    This Caller need to be initialised with the `procedure` where the Callee is subscribed
     and the `params` used within the remote procedure
 
     iex> Caller.start_link("com.spell.math.sum", [arguments: [1, 2, 3]])
@@ -44,11 +44,11 @@ defmodule RPC do
     defp loop(state) do
 
 
-      # `Spell.cast_call` performs an asyncronous call to the remote procedure, the result will 
+      # `Spell.cast_call` performs an asyncronous call to the remote procedure, the result will
       # be intercepted and parsed by the block `Spell.receive_result`
       {:ok, call_id} = Spell.cast_call(state.caller, state.procedure, state.params)
       Logger.info("<Caller: #{inspect(state.caller)}> send params: #{inspect(state.params)}")
-      
+
       case Spell.receive_result(state.caller, call_id) do
         {:ok, result} -> IO.inspect handle_result(state, result)
         {:error, reason} -> {:error, reason}
@@ -67,11 +67,11 @@ defmodule RPC do
     use GenServer
     @moduledoc """
     The callee need to be registered to the WAMP Dealer in order to be accesseble and expose
-    the procedure. 
-    
+    the procedure.
+
     iex> Callee.start_link()
 
-    Once it is registered it will wait an invocation from the Dealer and yield 
+    Once it is registered it will wait an invocation from the Dealer and yield
     the result back. in this case we have two function exposed:
 
     - `spell.math.sum`
@@ -82,7 +82,7 @@ defmodule RPC do
     Function that return the map of the functions exposed to the remote procedure
     """
     def function_list do
-      %{ 
+      %{
         "spell.math.sum" => &Math.sum/1,
         "spell.math.multiply" => &Math.multiply/1
       }
@@ -97,8 +97,10 @@ defmodule RPC do
     Start the callee with the passed procedure.
     """
     def start_link(options \\ []) do
-      GenServer.start_link(__MODULE__, [options])
+      GenServer.start_link(__MODULE__, [options], name: __MODULE__)
     end
+
+    def stop, do: GenServer.cast(__MODULE__, :stop)
 
     # Private Functions
 
@@ -118,6 +120,8 @@ defmodule RPC do
       state = Map.put(state, :register, new_register)
       {:ok, state}
     end
+
+    def handle_cast(:stop, state), do: {:stop, :normal, state}
 
     def handle_info({Spell.Peer, pid, %Spell.Message{args: [request, reg_id, _msg, params], type: :invocation}}, (%{callee: callee}) = state) do
       rpc = state.register[reg_id]
@@ -174,6 +178,9 @@ Logger.info("Starting the Crossbar.io test server...")
 :timer.sleep(10000)
 
 Logger.info("DONE... Stopping Crossbar.io server")
+
+# Stop the callee
+:ok = Callee.stop()
 # Stop the crossbar.io testing server
 :ok = Crossbar.stop()
 
