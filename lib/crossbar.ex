@@ -234,8 +234,7 @@ defmodule Crossbar do
     {:ok, state}
   end
 
-  def handle_info({Spell.Transport.WebSocket, _pid,
-                   {:terminating, {:remote, :closed}}}, _state) do
+  def handle_info({_transport, _pid, {:terminating, {:remote, :closed}}}, _state) do
     # Remove the handler when receiving a remote closed message
     # Logger.debug(fn -> "Crossbar out: #{inspect(message)}" end)
     :remove_handler

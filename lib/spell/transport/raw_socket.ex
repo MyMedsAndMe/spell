@@ -78,8 +78,8 @@ defmodule Spell.Transport.RawSocket do
 
   def handle_info({:tcp_closed, socket}, %__MODULE__{socket: socket} = state) do
     Logger.debug(fn -> "Socket connection terminating" end)
-    :ok = send_to_owner(state.owner, {:terminating, socket})
-    {:noreply, state}
+    :ok = send_to_owner(state.owner, {:terminating, {:remote, :closed}})
+    {:stop, {:remote, :closed}, state}
   end
 
   # Private Functions
@@ -144,7 +144,7 @@ defmodule Spell.Transport.RawSocket do
   defp respond_to(message, :wamp, state) do
     :ok = send_to_owner(state.owner, {:message, message})
   end
-  defp respond_to(message, :ping, state) do
+  defp respond_to(message, :ping, _state) do
     send(self, {:ping, message})
   end
 
