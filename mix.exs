@@ -56,6 +56,7 @@ defmodule Spell.Mixfile do
      {:msgpax, "~> 0.7"},
      # Req'd by: `Spell.Authentication.CRA`
      {:pbkdf2, github: "pma/erlang-pbkdf2", branch: "master"},
+     {:dialyze, github: "fishcakez/dialyze", branch: "min_plt"},
      # Doc deps
      {:earmark, "~> 0.1", only: :doc},
      {:ex_doc, "~> 0.7", only: :doc}
