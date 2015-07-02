@@ -61,6 +61,7 @@ defmodule Spell.Transport.RawSocket do
   def handle_info({:tcp, socket, raw_message}, %__MODULE__{socket: socket} = state) do
     Logger.debug(fn -> "Received message over socket: #{inspect(raw_message)}" end)
     :ok = handle_messages(to_string(raw_message), state)
+    :inet.setopts(state.socket, active: :once)
     {:noreply, state}
   end
 
@@ -115,7 +116,7 @@ defmodule Spell.Transport.RawSocket do
   # SSSS = echo the serializer value requested by the Client
   # RRRR RRRR RRRR RRRR = reserved and MUST be all zeros for now
   defp process_handshake_response({:ok, <<127,max_length::4,ser_id::4,0,0>>}, %__MODULE__{serializer_id: ser_id} = state) do
-    :inet.setopts(state.socket, active: true)
+    :inet.setopts(state.socket, active: :once)
     :proc_lib.init_ack({:ok, self})
     :gen_server.enter_loop(__MODULE__, [], %{state | router_max_length: max_length})
   end
