@@ -204,7 +204,7 @@ defmodule Spell do
       {:ok, role_options} ->
         session_options = Keyword.take(options, [:realm, :authentication])
         %{transport: Keyword.get(options, :transport),
-          serializer: Keyword.get(options, :serializer, Application.get_env(:spell, :serializer)),
+          serializer: Keyword.get(options, :serializer, Spell.Config.serializer),
           owner: Keyword.get(options, :owner),
           role: %{options: Keyword.put_new(role_options, Role.Session,
                                            session_options),
@@ -225,7 +225,7 @@ defmodule Spell do
 
   defp normalize_options(%{transport: transport_options} = options)
       when is_list(transport_options) do
-    %{options | transport: %{module: Application.get_env(:spell, :transport),
+    %{options | transport: %{module: Spell.Config.transport,
                              options: transport_options}}
       |> normalize_options()
   end

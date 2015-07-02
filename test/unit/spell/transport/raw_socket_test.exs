@@ -3,7 +3,7 @@ defmodule Spell.Transport.RawSocketTest do
 
   alias Spell.Transport.RawSocket
 
-  @serializer Application.get_env(:spell, :serializer)
+  @serializer Spell.Config.serializer
 
   test "new/1 -- bad host" do
     assert {:error, :nxdomain} =

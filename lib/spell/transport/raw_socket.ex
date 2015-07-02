@@ -82,6 +82,10 @@ defmodule Spell.Transport.RawSocket do
     {:stop, {:remote, :closed}, state}
   end
 
+  def terminate(_reason, %__MODULE__{socket: socket}) do
+    :gen_tcp.close(socket)
+    :ok
+  end
   # Private Functions
 
   defp handshake(%__MODULE__{socket: socket, serializer_id: serializer_id, max_length: max_length} = state) do
