@@ -3,7 +3,7 @@ defmodule Spell.Transport.WebSocketTest do
 
   alias Spell.Transport.WebSocket
 
-  @serializer Application.get_env(:spell, :serializer)
+  @serializer Spell.Config.serializer
 
   setup do: {:ok, Crossbar.get_config()}
 

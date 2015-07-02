@@ -1,8 +1,8 @@
 defmodule Spell.ConnectTest do
   use ExUnit.Case
 
-  @transport  Application.get_env(:spell, :transport)
-  @serializer Application.get_env(:spell, :serializer)
+  @transport  Spell.Config.transport
+  @serializer Spell.Config.serializer
   @bad_host   "192.168.100.100"
   @bad_uri    "ws://" <> @bad_host
 

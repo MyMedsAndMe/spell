@@ -1,23 +1,15 @@
 defmodule Mix.Tasks.Test.Integration do
   use Mix.Task
 
-  @available_transports  ["web_socket", "raw_socket"]
+  @available_transports  ["websocket", "rawsocket"]
   @available_serializers ["json", "msgpack"]
 
-  def transport_module(nil), do: transport_module("web_socket")
-  def transport_module("web_socket"), do: Spell.Transport.WebSocket
-  def transport_module("raw_socket"), do: Spell.Transport.RawSocket
-
-  def serializer_module(nil), do: serializer_module("json")
-  def serializer_module("json"), do: Spell.Serializer.JSON
-  def serializer_module("msgpack"), do: Spell.Serializer.MessagePack
-
   def set_transport do
-    Application.put_env(:spell, :transport, transport_module(System.get_env("TRANSPORT")))
+    Application.put_env(:spell, :transport, System.get_env("TRANSPORT"))
   end
 
   def set_serializer do
-    Application.put_env(:spell, :serializer, serializer_module(System.get_env("SERIALIZER")))
+    Application.put_env(:spell, :serializer, System.get_env("SERIALIZER"))
   end
 
   def run(args) do
