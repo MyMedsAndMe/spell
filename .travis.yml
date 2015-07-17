@@ -6,7 +6,12 @@ otp_release:
 sudo: true
 before_script:
   - sudo pip install crossbar[msgpack]
-script: mix test.all && mix spell.example.pubsub > /dev/null && mix spell.example.rpc > /dev/null
+  - export PLT_FILENAME=elixir-1.0.4_17.3.plt
+  - export PLT_LOCATION=/home/travis/$PLT_FILENAME
+  - wget -O $PLT_LOCATION https://raw.github.com/danielberkompas/travis_elixir_plts/master/$PLT_FILENAME
+script:
+  - mix test.all && mix spell.example.pubsub > /dev/null && mix spell.example.rpc > /dev/null
+  - dialyzer --no_check_plt --plt $PLT_LOCATION --no_native _build/test/lib/spell/ebin
 after_success:
   - pkill -f crossbar
 notifications:

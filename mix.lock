@@ -1,4 +1,5 @@
-%{"earmark": {:hex, :earmark, "0.1.15"},
+%{"dialyze": {:git, "git://github.com/fishcakez/dialyze.git", "ed74ac3efe78741aabefada87feba7e44992a888", [branch: "min_plt"]},
+  "earmark": {:hex, :earmark, "0.1.15"},
   "ex_doc": {:hex, :ex_doc, "0.7.2"},
   "msgpax": {:hex, :msgpax, "0.7.0"},
   "pbkdf2": {:git, "git://github.com/pma/erlang-pbkdf2.git", "93b290d72b107747c717fb1f55811d2ebc1b73ed", [branch: "master"]},
