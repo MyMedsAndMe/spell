@@ -154,6 +154,30 @@ for peer <- [subscriber, publisher], do: Spell.close(peer)
 
 See `Spell.Role.Publisher` and `Spell.Role.Subscriber` for more information.
 
+#### Pattern-based subscriptions
+
+By default, peers subscribe to topics using an exact matching policy. Using
+pattern-based subscriptions a peer can receive messages that match certain
+criteria.
+
+```elixir
+# assuming we have a subscriber peer connected
+
+# exact match
+{:ok, subscription} = Spell.call_subscribe(subscriber, "com.spell.my_topic")
+# subscriber will receive messages published in the "com.spell.my_topic" topic
+
+# prefix match
+{:ok, subscription} = Spell.call_subscribe(subscriber, "com.spell.my_topic_prefix", options: %{match: :prefix})
+# subscriber will receive messages published in topics:
+# "com.spell.my_topic_prefix.foo",  "com.spell.my_topic_prefix.bar", ...
+
+# wildcard match
+{:ok, subscription} = Spell.call_subscribe(subscriber, "com.spell..my_topic", options: %{match: :wildcard})
+# subscriber will receive messages published in topics:
+# "com.spell.foo.my_topic", "com.spell.bar.my_topic", ...
+```
+
 ### RPC
 
 RPC allows a caller to call a procedure using a remote callee.

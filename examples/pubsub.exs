@@ -81,7 +81,7 @@ defmodule PubSub do
     defp init(topics, options) when is_list(topics) do
       {:ok, subscriber} = PubSub.new_peer([Spell.Role.Subscriber], options)
       for topic <- topics do
-        {:ok, _publication} = Spell.call_subscribe(subscriber, topic)
+        {:ok, _publication} = Spell.call_subscribe(subscriber, topic, options)
       end
       %__MODULE__{subscriber: subscriber, topics: topics}
         |> struct(options)
@@ -162,6 +162,9 @@ Logger.info("Starting the Crossbar.io test server...")
 # Start the logging subscriber and subscribe it to the two active topics
 {:ok, subscriber} = SubLogger.start_link([randoms_topic, command_line_topic])
 
+# Start the logging subscriber and subscribe it to the two active topics using pattern
+{:ok, wildcard_subscriber} = SubLogger.start_link("com.spell.example", options: %{match: :prefix})
+
 # Let it happen
 :timer.sleep(10000)
 
@@ -169,7 +172,8 @@ Logger.info("DONE... Stopping peers")
 # Kill all the processes with a `:stop` message
 for pid <- [randoms_publisher,
             command_line_publisher,
-            subscriber], do: send(pid, :stop)
+            subscriber,
+            wildcard_subscriber], do: send(pid, :stop)
 
 Logger.info("DONE... Stopping Crossbar.io server")
 # Stop the crossbar.io testing server
