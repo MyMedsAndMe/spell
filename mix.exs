@@ -66,7 +66,8 @@ defmodule Spell.Mixfile do
     ["test.all": ["test.unit", "test.integration"],
      "test.unit":        "test test/unit",
      "spell.example.pubsub": "run examples/pubsub.exs",
-     "spell.example.rpc":    "run examples/rpc.exs"]
+     "spell.example.rpc":    "run examples/rpc.exs",
+     "spell.example.auth":   "run examples/auth/auth_service.exs"]
   end
 
   defp docs do
