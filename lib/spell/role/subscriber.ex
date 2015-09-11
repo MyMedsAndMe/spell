@@ -15,7 +15,7 @@ defmodule Spell.Role.Subscriber do
              unsubscribe_requests: HashDict.new(),
              subscriptions: HashDict.new()]
 
-  @timeout 1000
+  @default_timeout 1000
 
   # Public Interface
 
@@ -46,7 +46,7 @@ defmodule Spell.Role.Subscriber do
                              args: [^subscribe_id, subscription]}} ->
         {:ok, subscription}
     after
-      @timeout -> {:error, :timeout}
+      config_timeout -> {:error, :timeout}
     end
   end
 
@@ -224,4 +224,11 @@ defmodule Spell.Role.Subscriber do
                 args: [Message.new_id(), subscription])
   end
 
+  @spec config_timeout() :: integer
+  defp config_timeout do
+    case Application.get_env(:spell, :timeout) do
+      nil -> @default_timeout
+      i -> i
+    end
+  end
 end

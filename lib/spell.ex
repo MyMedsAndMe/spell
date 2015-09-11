@@ -122,6 +122,7 @@ defmodule Spell do
      retry connecting
    * `:retry_interval = #{@default_retry_interval} :: integer` inteveral
      in milliseconds between retries
+   * `:timeout = 2000 :: integer` connection timeout for a peer
    * `:authentication :: Keyword.t`, defaults to `[]`
        * `:id :: String.t` the `authid` to authenticate with
        * `:schemes :: Keyword.t` the authentication schemes supported. See

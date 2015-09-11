@@ -37,6 +37,7 @@ defmodule Spell.Role.Session do
 
   @goodbye_close_realm "wamp.error.close_realm"
   @goodbye_and_out     "wamp.error.goodbye_and_out"
+  @default_timeout 2000
 
   # Public Functions
 
@@ -61,7 +62,7 @@ defmodule Spell.Role.Session do
   """
   @spec call_goodbye(pid, Keyword.t) :: {:ok, Message.t} | {:error, :timeout}
   def call_goodbye(peer, options \\ []) do
-    timeout = Keyword.get(options, :timeout, 1000)
+    timeout = Keyword.get(options, :timeout, config_timeout)
     :ok = cast_goodbye(peer, options)
     Peer.await(peer, :goodbye, timeout)
   end
@@ -71,7 +72,7 @@ defmodule Spell.Role.Session do
   established.
   """
   @spec await_welcome(pid) :: {:ok, Message.t} | {:error, :timeout}
-  def await_welcome(peer), do: Peer.await(peer, :welcome)
+  def await_welcome(peer), do: Peer.await(peer, :welcome, config_timeout)
 
   def receive_welcome(peer) do
     receive_message peer, :welcome do
@@ -203,4 +204,11 @@ defmodule Spell.Role.Session do
     end
   end
 
+  @spec config_timeout() :: integer
+  defp config_timeout do
+    case Application.get_env(:spell, :timeout) do
+      nil -> @default_timeout
+      i -> i
+    end
+  end
 end
