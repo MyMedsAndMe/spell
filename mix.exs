@@ -3,7 +3,7 @@ defmodule Spell.Mixfile do
 
   def project do
     [app: :spell,
-     version: "0.0.1",
+     version: "0.1.0",
      name: "Spell",
      source_url: "https://github.com/MyMedsAndMe/spell",
      elixir: "~> 1.0",
@@ -39,6 +39,7 @@ defmodule Spell.Mixfile do
     [files: ["lib", "priv", "mix.exs", "README.md", "LICENSE"],
      contributors: ["Daniel Marín",
                     "Thomas Moulia",
+                    "Claudio Ortolina",
                     "Volker Rabe",
                     "Marco Tanzi"],
      licenses: ["Apache 2.0"],
