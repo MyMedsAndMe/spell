@@ -2,13 +2,14 @@ defmodule Spell.CalleeTest do
   use ExUnit.Case
 
   alias Spell.Role.Callee
+  alias Spell.Peer
 
   @procedure "com.spell.test.callee.procedure"
 
   setup do
     {:ok, peer} = Crossbar.uri(Crossbar.get_config())
       |> Spell.connect(roles: [Callee], realm: Crossbar.get_realm())
-    on_exit fn -> Spell.close(peer) end
+    on_exit fn -> if Process.alive?(peer), do: Spell.close(peer) end
     {:ok, peer: peer}
   end
 
@@ -37,6 +38,24 @@ defmodule Spell.CalleeTest do
   test "call_register", %{peer: peer} do
     {:ok, registration} = Spell.call_register(peer, @procedure)
     assert is_integer(registration)
+  end
+
+  test "stop/1", %{peer: peer} do
+    :ok = Peer.stop(peer)
+    refute_receive(_)
+  end
+
+  test "stop/1 with open REGISTER", %{peer: peer} do
+    {:ok, _registration} = Spell.cast_register(peer, @procedure)
+    :ok = Peer.stop(peer)
+    assert_receive({Peer, ^peer, {:closed, :register}})
+  end
+
+  test "stop/1 with open UNREGISTER", %{peer: peer} do
+    {:ok, registration} = Spell.call_register(peer, @procedure)
+    {:ok, _unregister} = Spell.cast_unregister(peer, registration)
+    :ok = Peer.stop(peer)
+    assert_receive({Peer, ^peer, {:closed, {:unregister, ^registration}}})
   end
 
 end

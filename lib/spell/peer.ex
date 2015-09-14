@@ -73,7 +73,12 @@ defmodule Spell.Peer do
   end
 
   @doc """
-  Stop the `peer` process.
+  Stop the `peer` process. Roles are responsible for notifying owners
+  of open commands that the command is being terminated via a message
+  like
+
+      {Spell.Peer, peer, {:closed, command}}
+
   """
   def stop(peer) do
     GenServer.cast(peer, :stop)
@@ -143,8 +148,6 @@ defmodule Spell.Peer do
 
   @doc """
   Send an Erlang message to the peer's owner.
-
-  TODO: Rename to `notify`
   """
   @spec send_to_owner(pid, any) :: :ok
   def send_to_owner(peer, term) do
@@ -281,7 +284,8 @@ defmodule Spell.Peer do
     {:stop, {:transport, reason}, state}
   end
 
-  def terminate(reason, _state) do
+  def terminate(reason, state) do
+    {:ok, _state} = Role.map_on_close(state.role.state, self())
     Logger.debug(fn -> "Peer terminating due to: #{inspect(reason)}" end)
   end
 

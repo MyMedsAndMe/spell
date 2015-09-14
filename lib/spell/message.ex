@@ -74,7 +74,7 @@ defmodule Spell.Message do
   clause for their respective WAMP message from `peer` given `type`.
 
   This macro is meant to be a convenience -- feel free to drop down to the
-  undelrying `receive`.
+  underlying `receive`.
 
   ## Example
 
@@ -93,12 +93,9 @@ defmodule Spell.Message do
                                  args: [^subscribe_id, subscription]}} ->
             {:ok, subscription}
           {Peer, ^peer, %Message{type: :error, args: [33, _, reason | _]}} ->
-            case Message.normalize_error(error) do
-              {:ok, reason} ->
-                 {:error, reason}
-              {:error, _, reason} ->
-                {:error, reason}
-            end
+            {:error, reason}
+          {Peer, ^peer, {:closed, reason}} ->
+            {:closed, reason}
         after
           @timeout -> {:error, :timeout}
         end
@@ -107,6 +104,10 @@ defmodule Spell.Message do
   """
   defmacro receive_message(peer, type, body) do
     code = get_code_for_type(type)
+    closed_branch = quote do
+      {Spell.Peer, ^unquote(peer), {:closed, _} = closed} -> closed
+    end
+
     branches = (body[:do] || [])
     |> Enum.map(fn
       {:->, _, [[match], branch_body]} ->
@@ -130,9 +131,12 @@ defmodule Spell.Message do
               when unquote(guards) -> unquote(branch_body)
             end
         end
-    end) |> Enum.map(fn [branch] -> branch end)
+    end)
+    |> Enum.map(fn [branch] -> branch end)
+    |> Enum.concat(closed_branch)
+
     quote do
-      receive do unquote(branches) after 1000 -> {:error, :timeout} end
+      receive do unquote(branches) after 5000 -> {:error, :timeout} end
     end
   end
 

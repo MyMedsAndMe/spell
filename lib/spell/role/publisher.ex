@@ -10,13 +10,6 @@ defmodule Spell.Role.Publisher do
   alias Spell.Message
   alias Spell.Peer
 
-  defstruct [published: HashDict.new()]
-
-  # Type Specs
-
-  @type t :: %__MODULE__{
-    published: HashDict.t(String.t, Message.t)}
-
   # Public Interface
 
   @doc """
@@ -67,7 +60,7 @@ defmodule Spell.Role.Publisher do
   def get_features(_options), do: {:publisher, %{}}
 
   def init(_peer_options, _role_options) do
-    {:ok, %__MODULE__{}}
+    {:ok, nil}
   end
 
   def handle_message(%{type: :published,

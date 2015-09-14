@@ -3,6 +3,7 @@ defmodule Spell.SessionTest do
 
   alias Spell.Role.Session
   alias Spell.Message
+  alias Spell.Peer
 
   setup do
     {:ok, peer} = Crossbar.uri(Crossbar.get_config())
@@ -13,5 +14,11 @@ defmodule Spell.SessionTest do
 
   test "call_goodbye/1", %{peer: peer} do
     assert {:ok, %Message{type: :goodbye}} = Session.call_goodbye(peer)
+  end
+
+  test "stop/1 with open GOODBYE", %{peer: peer} do
+    :ok = Session.cast_goodbye(peer)
+    :ok = Peer.stop(peer)
+    assert_receive({Peer, ^peer, {:closed, :goodbye}})
   end
 end

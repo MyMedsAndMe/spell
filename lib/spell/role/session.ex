@@ -165,6 +165,18 @@ defmodule Spell.Role.Session do
     {:ok, {:ok, message}, %{state | pid_goodbye: pid_goodbye}}
   end
 
+  @doc """
+  The `on_close/2` callback notifies processes which own open `HELLO` or
+  `GOODBYE` commands that the peer is closing by sending a
+  `{Spell.Peer, pid, {:closed, command}}` message.
+  """
+  def on_close(peer,
+               %{pid_hello: pid_hello, pid_goodbye: pid_goodbye} = state) do
+    if pid_hello, do: :ok = Peer.notify(pid_hello, {:closed, :hello})
+    if pid_goodbye, do: :ok = Peer.notify(pid_goodbye, {:closed, :goodbye})
+    super(peer, state)
+  end
+
   # Private Functions
 
   @spec new_hello(String.t, map) :: {:ok, Message.t} | {:error, any}

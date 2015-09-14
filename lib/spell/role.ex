@@ -32,8 +32,6 @@ defmodule Spell.Role do
     quote do
       @behaviour Spell.Role
 
-      # Helper Functions
-
       # Default Role Callbacks
 
       def get_features(_options),      do: nil

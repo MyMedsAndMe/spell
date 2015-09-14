@@ -206,6 +206,24 @@ defmodule Spell.Role.Subscriber do
     end
   end
 
+  @doc """
+  The `on_close` callback notifies the owners of all open `SUBSCRIBE` and
+  `UNSUBSCRIBE` commands that the connection is closed by sending
+  a `{Spell.Peer, pid, {:closed, command}}` message.
+  """
+  def on_close(peer,
+               %{subscribe_requests: subscribe_requests,
+                 unsubscribe_requests: unsubscribe_requests} = state) do
+    # TODO the command type and subscribe id should be included
+    for pid <- Dict.values(subscribe_requests) do
+      :ok = Peer.notify(pid, {:closed, :subscribe})
+    end
+    for {subscription, pid} <- Dict.values(unsubscribe_requests) do
+      :ok = Peer.notify(pid, {:closed, {:unsubscribe, subscription}})
+    end
+    super(peer, state)
+  end
+
   # Private Functions
 
   @spec new_subscribe_message(Message.wamp_uri, Keyword.t) ::
