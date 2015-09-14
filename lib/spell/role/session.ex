@@ -206,9 +206,6 @@ defmodule Spell.Role.Session do
 
   @spec config_timeout() :: integer
   defp config_timeout do
-    case Application.get_env(:spell, :timeout) do
-      nil -> @default_timeout
-      i -> i
-    end
+    Application.get_env(:spell, :timeout, @default_timeout)
   end
 end
