@@ -176,6 +176,15 @@ defmodule Crossbar do
     end
   end
 
+  @doc """
+  Generate a WAMP URI using the provided prefix and a random suffix.
+  """
+  def create_uri(prefix, length \\ 10) do
+    reseed()
+    "#{prefix}.#{rand_bin(length)}"
+  end
+
+
   # GenEvent Callbacks
 
   @doc """
@@ -306,4 +315,19 @@ defmodule Crossbar do
       port when is_binary(port) -> String.to_integer(port)
     end
   end
+
+  defp reseed() do
+    <<a :: 32, b :: 32, c :: 32>> = :crypto.rand_bytes(12)
+    :random.seed(a, b, c)
+  end
+
+  defp rand_bin(length, range \\ Enum.into(48..122, []), acc \\ [])
+  defp rand_bin(0, _, acc) do
+    :erlang.list_to_binary(acc)
+  end
+  defp rand_bin(length, range, acc) do
+    n = length(range) |> :random.uniform
+    rand_bin(length - 1, range, [Enum.at(range, n - 1) | acc])
+  end
+
 end

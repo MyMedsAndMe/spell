@@ -4,8 +4,6 @@ defmodule Spell.CalleeTest do
   alias Spell.Role.Callee
   alias Spell.Peer
 
-  @procedure "com.spell.test.callee.procedure"
-
   setup do
     {:ok, peer} = Crossbar.uri(Crossbar.get_config())
       |> Spell.connect(roles: [Callee], realm: Crossbar.get_realm())
@@ -14,7 +12,7 @@ defmodule Spell.CalleeTest do
   end
 
   test "cast_register/{2,3} receive_registered/2", %{peer: peer} do
-    {:ok, register_id} = Spell.cast_register(peer, @procedure)
+    {:ok, register_id} = Spell.cast_register(peer, create_uri())
     {:ok, registration} = Spell.receive_registered(peer, register_id)
     assert is_integer(registration)
   end
@@ -36,7 +34,7 @@ defmodule Spell.CalleeTest do
   end
 
   test "call_register", %{peer: peer} do
-    {:ok, registration} = Spell.call_register(peer, @procedure)
+    {:ok, registration} = Spell.call_register(peer, create_uri())
     assert is_integer(registration)
   end
 
@@ -46,16 +44,20 @@ defmodule Spell.CalleeTest do
   end
 
   test "stop/1 with open REGISTER", %{peer: peer} do
-    {:ok, _registration} = Spell.cast_register(peer, @procedure)
+    {:ok, _registration} = Spell.cast_register(peer, create_uri())
     :ok = Peer.stop(peer)
     assert_receive({Peer, ^peer, {:closed, :register}})
   end
 
   test "stop/1 with open UNREGISTER", %{peer: peer} do
-    {:ok, registration} = Spell.call_register(peer, @procedure)
+    {:ok, registration} = Spell.call_register(peer, create_uri())
     {:ok, _unregister} = Spell.cast_unregister(peer, registration)
     :ok = Peer.stop(peer)
     assert_receive({Peer, ^peer, {:closed, {:unregister, ^registration}}})
   end
+
+  # Private Functions
+
+  defp create_uri, do: Crossbar.create_uri("com.spell.test.callee")
 
 end
