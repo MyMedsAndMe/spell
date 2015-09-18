@@ -42,16 +42,14 @@ defmodule RPC do
     end
 
     defp loop(state) do
-
-
       # `Spell.cast_call` performs an asyncronous call to the remote procedure, the result will
       # be intercepted and parsed by the block `Spell.receive_result`
       {:ok, call_id} = Spell.cast_call(state.caller, state.procedure, state.params)
       Logger.info("<Caller: #{inspect(state.caller)}> send params: #{inspect(state.params)}")
 
       case Spell.receive_result(state.caller, call_id) do
-        {:ok, result} -> IO.inspect handle_result(state, result)
-        {:error, reason} -> {:error, reason}
+        {:ok, result} -> handle_result(state, result)
+        {:closed, reason} -> :ok
       end
 
       :timer.sleep(1000)
