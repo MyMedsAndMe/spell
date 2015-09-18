@@ -216,7 +216,7 @@ defmodule Spell.Role do
     {:ok, Enum.reverse(results)}
   end
   defp map([], _function, results, reasons) do
-    {:close, Enum.reverse(results), Enum.reverse(reasons)}
+    {:close, Enum.reverse(reasons), Enum.reverse(results)}
   end
 
   defp map([{role_module, _} = role | roles], function, results, reasons) do
