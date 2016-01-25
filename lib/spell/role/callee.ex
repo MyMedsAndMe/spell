@@ -193,6 +193,24 @@ defmodule Spell.Role.Callee do
     end
   end
 
+  @doc """
+  The `on_close` callback notifies the owners of all open `REGISTER` and
+  `UNREGISTER` commands that the connection is closed by sending
+  a `{Spell.Peer, pid, {:closed, command}}` message.
+  """
+  def on_close(peer,
+               %{register_requests: register_requests,
+                 unregister_requests: unregister_requests} = state) do
+    # TODO the command type and subscribe id should be included
+    for pid <- Dict.values(register_requests) do
+      :ok = Peer.notify(pid, {:closed, :register})
+    end
+    for {registration, pid} <- Dict.values(unregister_requests) do
+      :ok = Peer.notify(pid, {:closed, {:unregister, registration}})
+    end
+    super(peer, state)
+  end
+
   # Private Functions
 
   @spec new_register_message(Message.wamp_id, Keyword.t) ::

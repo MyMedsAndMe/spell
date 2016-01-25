@@ -90,6 +90,18 @@ defmodule Spell.Role.Caller do
     {:ok, :ok, %{state | call_requests: call_requests}}
   end
 
+  @doc """
+  The `on_close/2` callback notifies processes which own open `CALL` commands
+  that the peer is closing by sending a `{Spell.Peer, pid, {:closed, :call}}`
+  message.
+  """
+  def on_close(peer, %{call_requests: call_requests} = state) do
+    for pid <- Dict.values(call_requests) do
+      :ok = Peer.notify(pid, {:closed, :call})
+    end
+    super(peer, state)
+  end
+
   # Private Functions
 
   defp new_call_message(procedure, options) do
