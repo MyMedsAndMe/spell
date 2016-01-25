@@ -61,8 +61,8 @@ defmodule Spell.Mixfile do
       # Req'd by: `Spell.Serializer.MessagePack`
       {:msgpax, "~> 0.7"},
       # Doc deps
-      {:earmark, "~> 0.1", only: :doc},
-      {:ex_doc, "~> 0.7", only: :doc}
+      {:earmark, "~> 0.2", only: :doc},
+      {:ex_doc, "~> 0.11", only: :doc}
     ]
   end
 
@@ -79,9 +79,7 @@ defmodule Spell.Mixfile do
   end
 
   defp docs do
-    [
-        # TODO: change markdown compiler to once that supports gfm
-        #readme: "README.md"
-    ]
+    [main: "overview",
+     extras: ["README.md": [title: "Overview", path: "overview"]]]
   end
 end

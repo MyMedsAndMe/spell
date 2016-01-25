@@ -1,5 +1,5 @@
-%{"earmark": {:hex, :earmark, "0.1.15"},
-  "ex_doc": {:hex, :ex_doc, "0.7.2"},
+%{"earmark": {:hex, :earmark, "0.2.1"},
+  "ex_doc": {:hex, :ex_doc, "0.11.4"},
   "msgpax": {:hex, :msgpax, "0.7.0"},
   "pbkdf2": {:git, "git://github.com/pma/erlang-pbkdf2.git", "93b290d72b107747c717fb1f55811d2ebc1b73ed", [branch: "master"]},
   "poison": {:hex, :poison, "1.4.0"},
