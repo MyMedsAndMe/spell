@@ -45,7 +45,6 @@ defmodule Spell.Mixfile do
      links: %{"Github" => "https://github.com/MyMedsAndMe/spell"}]
   end
 
-  # TODO: allow transport/serialization deps to be filtered out
   defp deps(:prod) do
     [
      # Req'd by: `Spell.Authentication.CRA`
@@ -68,11 +67,15 @@ defmodule Spell.Mixfile do
   end
 
   defp aliases do
-    ["test.all": ["test.unit", "test.integration"],
-     "test.unit":        "test test/unit",
-     "spell.example.pubsub": "run examples/pubsub.exs",
-     "spell.example.rpc":    "run examples/rpc.exs",
-     "spell.example.auth":   "run examples/auth/auth_service.exs"]
+    examples = for {k, v} <- [pubsub: "pubsub.exs",
+                              rpc: "rpc.exs",
+                              auth: "auth/auth_service.exs"] do
+      {:"spell.example.#{k}", "run examples/#{v}"}
+    end
+    ["test.all":  ["test.unit", "test.integration"],
+     "test.unit": "test test/unit"] ++
+      ["spell.example.all": Dict.keys(examples) |> Enum.map(&Atom.to_string/1)] ++
+      examples
   end
 
   defp docs do
