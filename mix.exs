@@ -9,7 +9,7 @@ defmodule Spell.Mixfile do
      elixir: "~> 1.0",
      description: description,
      package: package,
-     deps: deps,
+     deps: deps(Mix.env),
      aliases: aliases,
      docs: docs,
      preferred_cli_env: ["test.all": :test,
@@ -23,7 +23,6 @@ defmodule Spell.Mixfile do
   def application do
     [applications: [:logger,
                     :websocket_client,
-                    :poison,
                     :pbkdf2],
     mod: {Spell, []}]
   end
@@ -47,19 +46,24 @@ defmodule Spell.Mixfile do
   end
 
   # TODO: allow transport/serialization deps to be filtered out
-  defp deps do
+  defp deps(:prod) do
     [
-     # Req'd by: `Spell.Transport.Websocket`
-     {:websocket_client, github: "jeremyong/websocket_client", tag: "v0.7"},
-     # Req'd by: `Spell.Serializer.JSON`
-     {:poison, "~> 1.4.0"},
-     # Req'd by: `Spell.Serializer.MessagePack`
-     {:msgpax, "~> 0.7"},
      # Req'd by: `Spell.Authentication.CRA`
-     {:pbkdf2, github: "pma/erlang-pbkdf2", branch: "master"},
-     # Doc deps
-     {:earmark, "~> 0.1", only: :doc},
-     {:ex_doc, "~> 0.7", only: :doc}
+     {:pbkdf2, github: "pma/erlang-pbkdf2", branch: "master"}
+    ]
+  end
+
+  defp deps(_) do
+    deps(:prod) ++ [
+      # Req'd by: `Spell.Transport.Websocket`
+      {:websocket_client, github: "jeremyong/websocket_client", tag: "v0.7"},
+      # Req'd by: `Spell.Serializer.JSON`
+      {:poison, "~> 1.4"},
+      # Req'd by: `Spell.Serializer.MessagePack`
+      {:msgpax, "~> 0.7"},
+      # Doc deps
+      {:earmark, "~> 0.1", only: :doc},
+      {:ex_doc, "~> 0.7", only: :doc}
     ]
   end
 

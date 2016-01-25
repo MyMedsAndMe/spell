@@ -30,6 +30,33 @@ Spell uses GitHub [issues](https://github.com/MyMedsAndMe/spell/issues) and
 Spell has a mailing list at spell@librelist.com; general questions or ideas are
 welcome there. See [librelist](http://librelist.com/) for how to sign up.
 
+## Using Spell with your Elixir Project
+
+To use Spell from within your Elixir library add, add it to your `mix.exs` deps,
+along with the required transport and serialization libraries:
+
+```elixir
+defp deps do
+  [
+    ...
+    # Required:
+    {:spell, "~> 0.1"},
+    # Required if using the websocket transport:
+    {:websocket_client, github: "jeremyong/websocket_client", tag: "v0.7"},
+    # Required if using the JSON serializer:
+    {:poison, "~> 1.4"},
+    # Required if using the msgpack serializer:
+    {:msgpax, "~> 0.7"}
+  ]
+end
+```
+
+Fetch the dependencies by running:
+
+```
+$ mix deps.get
+```
+
 ## How it Works
 
 You can run the examples you're about to run into, though first you'll need
