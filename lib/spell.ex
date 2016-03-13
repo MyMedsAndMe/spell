@@ -138,7 +138,7 @@ defmodule Spell do
         transport = %{module: Spell.Transport.RawSocket,
                       options: [host: host, port: port]}
         init_peer(options, transport)
-      {:ok, %{protocol: protocol, host: host, port: port, path: path}} ->
+      {:ok, %{protocol: protocol, host: host, port: port, path: path}} when protocol in [:ws, :wss] ->
         transport = %{module: Spell.Transport.WebSocket,
                       options: [host: host, port: port, path: path, protocol: to_string(protocol)]}
         init_peer(options, transport)
