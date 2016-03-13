@@ -138,6 +138,10 @@ defmodule Spell do
         transport = %{module: Spell.Transport.WebSocket,
                       options: [host: host, port: port, path: path]}
         init_peer(options, transport)
+      {:ok, %{protocol: :wss, host: host, port: port, path: path}} ->
+        transport = %{module: Spell.Transport.WebSocket,
+                      options: [host: host, port: port, path: path]}
+        init_peer(options, transport)
       {:ok, %{protocol: :raw_socket, host: host, port: port}} ->
         transport = %{module: Spell.Transport.RawSocket,
                       options: [host: host, port: port]}
