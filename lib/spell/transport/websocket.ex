@@ -10,14 +10,15 @@ defmodule Spell.Transport.WebSocket do
 
   # Module Attributes
 
-  @options_spec [:host, {:port, default: 80}, {:path, default: ""}]
+  @options_spec [:host, {:port, default: 80}, {:path, default: ""}, {:protocol, default: "ws"}]
 
   # Type Declarations
 
   @type options :: [
       {:host, String.t}
     | {:port, :inet.port}
-    | {:path, String.t}]
+    | {:path, String.t}
+    | {:protocol, String.t}]
 
 
   # Spell.Transport Callbacks
@@ -35,9 +36,9 @@ defmodule Spell.Transport.WebSocket do
   @spec connect(module, options) :: {:ok, pid} | {:error, any}
   def connect(serializer, options) when is_list(options) do
     case get_all(options, @options_spec) do
-      {:ok, [host, port, path]}
+      {:ok, [host, port, path, protocol]}
           when is_binary(host) and is_integer(port) and is_binary(path) ->
-        url = "ws://#{host}:#{port}#{path}"
+        url = "#{protocol}://#{host}:#{port}#{path}"
         serializer_info = serializer.transport_info(__MODULE__)
         extra_headers = get_extra_headers(serializer_info)
 
