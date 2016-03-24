@@ -134,13 +134,13 @@ defmodule Spell do
   def connect(uri, options \\ [])
       when is_binary(uri) and is_list(options) do
     case parse_uri(uri) do
-      {:ok, %{protocol: :ws, host: host, port: port, path: path}} ->
-        transport = %{module: Spell.Transport.WebSocket,
-                      options: [host: host, port: port, path: path]}
-        init_peer(options, transport)
       {:ok, %{protocol: :raw_socket, host: host, port: port}} ->
         transport = %{module: Spell.Transport.RawSocket,
                       options: [host: host, port: port]}
+        init_peer(options, transport)
+      {:ok, %{protocol: protocol, host: host, port: port, path: path}} when protocol in [:ws, :wss] ->
+        transport = %{module: Spell.Transport.WebSocket,
+                      options: [host: host, port: port, path: path, protocol: to_string(protocol)]}
         init_peer(options, transport)
       {:error, reason} -> {:error, reason}
     end
