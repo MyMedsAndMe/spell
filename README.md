@@ -57,6 +57,17 @@ Fetch the dependencies by running:
 $ mix deps.get
 ```
 
+Now, list the `:spell` application in your application's dependencies:
+
+```elixir
+def application do
+  [
+    applications: [:spell, ...],
+    ...
+  ]
+end
+```
+
 ## How it Works
 
 You can run the examples you're about to run into, though first you'll need
