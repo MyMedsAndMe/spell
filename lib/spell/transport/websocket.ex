@@ -61,6 +61,9 @@ defmodule Spell.Transport.WebSocket do
     {:ok, %{owner: owner, serializer_info: serializer_info}}
   end
 
+  def websocket_handle({:ping, _}, _conn_state, state) do
+    {:ok, state}
+  end
   def websocket_handle({frame_type, raw_message}, _conn_state, state)
       when frame_type in [:text, :binary] do
     :ok = send_to_owner(state.owner, {:message, raw_message})
