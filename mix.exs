@@ -57,9 +57,9 @@ defmodule Spell.Mixfile do
       # Req'd by: `Spell.Transport.Websocket`
       {:websocket_client, github: "jeremyong/websocket_client", tag: "v0.7"},
       # Req'd by: `Spell.Serializer.JSON`
-      {:poison, "~> 1.4"},
+      {:poison, "~> 1.4", optional: true},
       # Req'd by: `Spell.Serializer.MessagePack`
-      {:msgpax, "~> 0.7"},
+      {:msgpax, "~> 0.7", optional: true},
       # Doc deps
       {:earmark, "~> 0.2", only: :doc},
       {:ex_doc, "~> 0.11", only: :doc}
