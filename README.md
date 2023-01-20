@@ -1,10 +1,15 @@
-# Spell [![Build Status](https://travis-ci.org/MyMedsAndMe/spell.svg?branch=master)](https://travis-ci.org/MyMedsAndMe/spell)
-
+# spell [DEPRECATED]
 
 Spell is an [Elixir](http://elixir-lang.org/) [WAMP](http://wamp.ws/) client
 implementing the
 [basic profile](https://github.com/tavendo/WAMP/blob/master/spec/basic.md)
 specification.
+
+# Reason for fork
+
+For spellchecking old symposium
+
+# Oficial readme
 
 Why WAMP?
 
